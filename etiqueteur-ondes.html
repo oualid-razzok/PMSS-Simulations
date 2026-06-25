@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Étiqueteur d'ondes — Identification P Q R S J T U</title>
+<style>
+  /* ===== Reset & base ===== */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: #f5f5f5;
+    color: #1a1a1a;
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    padding: 16px;
+    display: flex;
+    justify-content: center;
+    align-items: stretch;
+    overflow: hidden;
+  }
+
+  /* ===== Conteneur principal (responsive) ===== */
+  .app {
+    width: 100%;
+    max-width: 1200px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: #ffffff;
+    border: 1px solid #e5e5e5;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.03);
+    overflow: hidden;
+  }
+
+  /* ===== En-tête ===== */
+  .app-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid #e5e5e5;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .app-title { display: flex; align-items: baseline; gap: 8px; }
+  .app-title h1 {
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: #1a1a1a;
+  }
+  .app-title .subtitle {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #737373;
+  }
+  .header-info {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .header-info .item {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+  }
+  .header-info .info-key {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #737373;
+  }
+  .header-info .value {
+    font-family: ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
+    font-size: 14px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: #1a1a1a;
+  }
+
+  /* ===== Zone canvas ===== */
+  .canvas-zone {
+    flex: 1 1 0;
+    min-height: 0;
+    position: relative;
+    background: #fff8fa;
+    overflow: hidden;
+  }
+  .canvas-zone canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+  .canvas-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+  .lead-badge {
+    position: absolute;
+    top: 8px;
+    left: 12px;
+    pointer-events: none;
+    user-select: none;
+  }
+  .lead-badge .name {
+    font-family: ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1;
+    color: #1a1a1a;
+  }
+  .lead-badge .desc {
+    margin-top: 2px;
+    font-size: 9px;
+    line-height: 1.2;
+    color: #737373;
+  }
+  .scale-anno {
+    position: absolute;
+    bottom: 6px;
+    right: 10px;
+    font-size: 9px;
+    color: #737373;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  /* ===== Étiquettes ===== */
+  .label {
+    position: absolute;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #1a1a1a;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: grab;
+    user-select: none;
+    touch-action: none;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+    border: 1px solid rgba(0,0,0,0.15);
+    z-index: 10;
+  }
+  .label:hover {
+    transform: scale(1.08);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  }
+  .label.dragging {
+    cursor: grabbing;
+    z-index: 1000;
+    transform: scale(1.18);
+    box-shadow: 0 6px 14px rgba(0,0,0,0.35);
+    transition: none;
+    pointer-events: none;
+  }
+  .label.placed {
+    transform: translate(-50%, -50%);
+    transition: left 0.18s ease, top 0.18s ease, background-color 0.2s ease;
+  }
+  .label.correct {
+    background: #16a34a !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.22);
+  }
+  .label.wrong {
+    background: #dc2626 !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.22);
+  }
+  /* Petit témoin de position correcte (croix) — affiché après vérification */
+  .target-marker {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    z-index: 5;
+    display: none;
+  }
+  .target-marker::before, .target-marker::after {
+    content: '';
+    position: absolute;
+    background: #1a1a1a;
+    opacity: 0.4;
+  }
+  .target-marker::before {
+    left: 50%; top: 0; bottom: 0;
+    width: 1.5px;
+    transform: translateX(-50%);
+  }
+  .target-marker::after {
+    top: 50%; left: 0; right: 0;
+    height: 1.5px;
+    transform: translateY(-50%);
+  }
+  .target-marker.shown { display: block; }
+
+  /* ===== Bac à étiquettes (tray) ===== */
+  .tray {
+    padding: 10px 16px;
+    border-top: 1px solid #e5e5e5;
+    background: #fafafa;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    min-height: 60px;
+  }
+  .tray-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #737373;
+    margin-right: 4px;
+    white-space: nowrap;
+  }
+  .tray-slots {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .tray-slot {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #ffffff;
+    border: 1px dashed #d4d4d4;
+    border-radius: 50%;
+  }
+  .tray-slot .label {
+    position: static;
+    transform: none;
+    width: 28px;
+    height: 28px;
+  }
+  .tray-slot .label.placed {
+    /* override — when in tray, no transform */
+    transform: none;
+  }
+  /* Couleurs distinctes par étiquette */
+  .label.color-P { background: #2563eb; }
+  .label.color-Q { background: #92400e; }
+  .label.color-R { background: #dc2626; }
+  .label.color-S { background: #7c3aed; }
+  .label.color-J { background: #f97316; }
+  .label.color-T { background: #16a34a; }
+  .label.color-U { background: #0891b2; }
+
+  /* ===== Pied de page ===== */
+  .app-footer {
+    padding: 10px 16px;
+    border-top: 1px solid #e5e5e5;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    background: #ffffff;
+  }
+  .footer-message {
+    font-size: 13px;
+    color: #404040;
+    flex: 1;
+    min-width: 200px;
+  }
+  .footer-message.success { color: #16a34a; font-weight: 600; }
+  .footer-message.error { color: #dc2626; font-weight: 600; }
+  .footer-score {
+    font-family: ui-monospace, "SF Mono", monospace;
+    font-size: 18px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: #1a1a1a;
+    padding: 4px 12px;
+    background: #f5f5f5;
+    border-radius: 6px;
+    border: 1px solid #e5e5e5;
+  }
+  button {
+    padding: 8px 18px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    border: 1px solid #1a1a1a;
+    background: #1a1a1a;
+    color: #ffffff;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.15s ease, transform 0.1s ease;
+  }
+  button:hover { background: #404040; }
+  button:active { transform: scale(0.98); }
+  button.secondary {
+    background: #ffffff;
+    color: #1a1a1a;
+  }
+  button.secondary:hover { background: #f5f5f5; }
+  button[hidden] { display: none; }
+</style>
+</head>
+<body>
+  <main class="app">
+    <header class="app-header">
+      <div class="app-title">
+        <h1>Étiqueteur d'ondes</h1>
+        <span class="subtitle">Identification des ondes P, Q, R, S, J, T, U</span>
+      </div>
+      <div class="header-info">
+        <div class="item">
+          <span class="info-key">Dérivation</span>
+          <span class="value" id="lead-display">DII</span>
+        </div>
+        <div class="item">
+          <span class="info-key">FC</span>
+          <span class="value" id="hr-display">80 bpm</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="canvas-zone" id="canvas-zone">
+      <canvas id="ecg-canvas"></canvas>
+      <div class="canvas-overlay" id="canvas-overlay">
+        <div class="lead-badge">
+          <div class="name" id="lead-name">DII</div>
+          <div class="desc" id="lead-desc">Inférieur — FL vs FD</div>
+        </div>
+        <div class="scale-anno">25 mm/s · 10 mm/mV</div>
+      </div>
+    </div>
+
+    <div class="tray">
+      <span class="tray-label">Étiquettes</span>
+      <div class="tray-slots" id="tray-slots"></div>
+    </div>
+
+    <footer class="app-footer">
+      <button id="new-trace-btn">Nouveau tracé</button>
+      <button id="check-btn">Vérifier</button>
+      <div class="footer-message" id="message">Glissez chaque étiquette sur le sommet correspondant du tracé.</div>
+      <div class="footer-score" id="score">— / 6</div>
+      <button id="reset-btn" class="secondary" hidden>Recommencer</button>
+    </footer>
+  </main>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ==========================================================================
+   * Bibliothèque de génération ECG (portée depuis Infirmary Integrated)
+   * ========================================================================== */
+
+  var LEADS = ['I', 'II', 'III', 'aVR', 'aVL', 'aVF', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6'];
+  var LEAD_LABEL = {
+    I: 'DI', II: 'DII', III: 'DIII',
+    aVR: 'aVR', aVL: 'aVL', aVF: 'aVF',
+    V1: 'V1', V2: 'V2', V3: 'V3', V4: 'V4', V5: 'V5', V6: 'V6'
+  };
+  var LEAD_DESC = {
+    I:   'Latéral — FG vs FD',
+    II:  'Inférieur — FL vs FD',
+    III: 'Inférieur — FL vs FG',
+    aVR: 'Axe droit — augmentée',
+    aVL: 'Latéral — augmentée',
+    aVF: 'Inférieur — augmentée',
+    V1:  'Septal — précordiale droite',
+    V2:  'Septal — précordiale droite',
+    V3:  'Antérieur — transitionnelle',
+    V4:  'Antérieur — apex',
+    V5:  'Latéral — précordielle gauche',
+    V6:  'Latéral — précordielle gauche'
+  };
+
+  var WP = { QRST:0, P:1, Q:2, R:3, S:4, J:5, T:6, PR:7, ST:8, TP:9 };
+
+  var baseLeadCoeff = [
+    [0.7,   0.7,  0.7,  0.7,  0.7,  0.7,  0.8,  0,   0,   0],
+    [1.0,   1.0,  1.0,  1.0,  1.0,  1.0,  1.0,  0,   0,   0],
+    [0.5,   0.5,  0.5,  0.5,  0.5,  0.5,  0.2,  0,   0,   0],
+    [-0.9, -1.0, -1.0, -0.8, -1.0, -1.0, -0.9,  0,   0,   0],
+    [0.2,  -1.0,  0.3,  0.2,  0.4,  0.3,  0.6,  0,   0,   0],
+    [0.8,   0.7,  0.8,  0.8,  0.8,  0.8,  0.4,  0,   0,   0],
+    [-1.0,  0.2, -0.7, -1.0,  0.0,  0.0,  0.3,  0,   0,   0],
+    [-1.2,  0.2, -1.8, -1.2,  0.0, -1.0,  1.4,  0,   0.1, 0],
+    [-1.4,  0.2, -3.0, -1.4,  0.0,  0.0,  1.8,  0,   0.1, 0],
+    [-0.8,  0.7, -9.0, -0.8,  0.0,  0.0,  1.4,  0,   0.1, 0],
+    [-0.2,  0.7, -10.0,-0.2,  0.0,  0.0,  1.0,  0,   0.1, 0],
+    [-0.1,  1.0, -9.0, -0.1,  0.0,  0.0,  0.8,  0,   0,   0]
+  ];
+
+  function bezier(p0, p1, p2, pct) {
+    var inv = 1 - pct;
+    return {
+      t:  p0.t  * inv * inv + 2 * p1.t  * pct * inv + p2.t  * pct * pct,
+      mv: p0.mv * inv * inv + 2 * p1.mv * pct * inv + p2.mv * pct * pct
+    };
+  }
+
+  function peak(length, mv, mvEnd, startMv) {
+    if (length <= 0) return [];
+    var out = [];
+    var RES_MS = 10;
+    var res = (2 * (RES_MS / 1000)) / length;
+    for (var i = 1; i * res <= 1; i++) {
+      var pct = i * res;
+      out.push(bezier(
+        { t: 0, mv: startMv },
+        { t: length / 3, mv: mv },
+        { t: length / 2, mv: mv },
+        pct
+      ));
+    }
+    for (var i = 1; i * res <= 1; i++) {
+      var pct = i * res;
+      out.push(bezier(
+        { t: length / 2, mv: mv },
+        { t: (length * 3) / 5, mv: mv },
+        { t: length, mv: mvEnd },
+        pct
+      ));
+    }
+    out.push({ t: length, mv: mvEnd });
+    return out;
+  }
+
+  function line(length, mv, startMv) {
+    if (length <= 0) return [];
+    var out = [];
+    var RES_MS = 10;
+    var step = RES_MS / 1000;
+    for (var t = step; t <= length; t += step) {
+      out.push({ t: t, mv: startMv + (mv - startMv) * (t / length) });
+    }
+    out.push({ t: length, mv: mv });
+    return out;
+  }
+
+  /* Génère un battement cardiaque complet avec marquage des sommets.
+   * Retourne { beat: [...points], markers: { P, Q, R, S, J, T, U : {t, mv} } } */
+  function generateBeatWithMarkers(lead, hr, qrsInterval) {
+    hr = hr || 80;
+    qrsInterval = qrsInterval || 0.08;
+    var hrInterval = 60 / Math.max(1, hr);
+    var prFrac = Math.min(1, Math.max(0, (hr - 60) / (160 - 60)));
+    var pr = 0.16 + (0.20 - 0.16) * prFrac;
+    var qt = Math.min(1, Math.max(0.1, 3.3 * qrsInterval));
+    var stInterval = Math.max(0, qt - qrsInterval);
+    var stSegment = stInterval * (1 / 3);
+    var tInterval = stInterval * (2 / 3);
+
+    var leadIdx = LEADS.indexOf(lead);
+    var coeff = baseLeadCoeff[leadIdx];
+    var beat = [];
+    var markers = {};
+    var cursor = { t: 0, mv: 0 };
+
+    function append(pts) {
+      for (var i = 0; i < pts.length; i++) {
+        beat.push({ t: cursor.t + pts[i].t, mv: pts[i].mv });
+      }
+      if (pts.length > 0) {
+        cursor = {
+          t: cursor.t + pts[pts.length - 1].t,
+          mv: pts[pts.length - 1].mv
+        };
+      }
+    }
+
+    // — Onde P — durée (PR*2)/3, amp 0,1
+    var pStart = cursor.t;
+    var pPts = peak((pr * 2) / 3, 0.1 * coeff[WP.P], 0, cursor.mv);
+    append(pPts);
+    // Sommet P : le point de mv maximale dans le segment
+    markers.P = findExtremum(pPts, pStart, coeff[WP.P] > 0 ? 'max' : 'min');
+
+    // — Segment PR — plat à 0
+    append(line(pr / 3, 0 + coeff[WP.PR], cursor.mv));
+
+    // — Q — durée QRS/4, amp -0,05
+    var qStart = cursor.t;
+    var qPts = line(qrsInterval / 4, -0.05 * coeff[WP.Q], cursor.mv);
+    append(qPts);
+    markers.Q = findExtremum(qPts, qStart, coeff[WP.Q] > 0 ? 'max' : 'min');
+
+    // — R — durée QRS/4, amp 0,9
+    var rStart = cursor.t;
+    var rPts = line(qrsInterval / 4, 0.9 * coeff[WP.R], cursor.mv);
+    append(rPts);
+    markers.R = findExtremum(rPts, rStart, coeff[WP.R] > 0 ? 'max' : 'min');
+
+    // — S — durée QRS/4, amp -0,3
+    var sStart = cursor.t;
+    var sPts = line(qrsInterval / 4, -0.3 * coeff[WP.S], cursor.mv);
+    append(sPts);
+    markers.S = findExtremum(sPts, sStart, coeff[WP.S] > 0 ? 'max' : 'min');
+
+    // — J — durée QRS/4, amp -0,1
+    var jStart = cursor.t;
+    var jPts = line(qrsInterval / 4, -0.1 * coeff[WP.J], cursor.mv);
+    append(jPts);
+    // J est le point de fin du QRS (jonction QRS-ST) — on marque ce point
+    markers.J = { t: cursor.t, mv: cursor.mv };
+
+    // — Segment ST — plat
+    append(line(stSegment, 0 + coeff[WP.ST], cursor.mv));
+
+    // — Onde T — durée tInterval, amp 0,2
+    var tStart = cursor.t;
+    var tPts = peak(tInterval, 0.2 * coeff[WP.T], 0, cursor.mv);
+    append(tPts);
+    markers.T = findExtremum(tPts, tStart, coeff[WP.T] > 0 ? 'max' : 'min');
+
+    // — Onde U — petite bosse après T, durée 0,12 s
+    // Toujours présente (plus visible sur V2-V4, discrète ailleurs)
+    var uLen = 0.12;
+    if (cursor.t + uLen < hrInterval - 0.05) {
+      var uStart = cursor.t;
+      var uAmp = 0.04 * (coeff[WP.T] >= 0 ? 1 : -1);
+      var uPts = peak(uLen, uAmp, 0, cursor.mv);
+      append(uPts);
+      markers.U = findExtremum(uPts, uStart, uAmp > 0 ? 'max' : 'min');
+    }
+
+    // — Segment TP — reste
+    var tpLen = Math.max(0, hrInterval - cursor.t);
+    append(line(tpLen, 0 + coeff[WP.TP], cursor.mv));
+
+    if (beat.length > 0) {
+      beat[beat.length - 1].t = hrInterval;
+    }
+    return { beat: beat, markers: markers };
+  }
+
+  function findExtremum(pts, tOffset, mode) {
+    if (!pts || pts.length === 0) return null;
+    var best = pts[0];
+    for (var i = 1; i < pts.length; i++) {
+      if (mode === 'max' && pts[i].mv > best.mv) best = pts[i];
+      else if (mode === 'min' && pts[i].mv < best.mv) best = pts[i];
+    }
+    return { t: tOffset + best.t, mv: best.mv };
+  }
+
+  /* ==========================================================================
+   * Composant d'affichage — ECG figé
+   * ========================================================================== */
+
+  var VISIBLE_SECONDS = 2.4;   // fenêtre affichée (2 battements à 50 bpm, plus à 80)
+  var SWEEP_MM_PER_S = 25;
+  var GAIN_MM_PER_MV = 10;
+  var TOLERANCE_PX = 25;       // tolérance de positionnement (±25 px)
+
+  var canvas = document.getElementById('ecg-canvas');
+  var ctx = canvas.getContext('2d');
+  var canvasZone = document.getElementById('canvas-zone');
+  var overlay = document.getElementById('canvas-overlay');
+
+  var state = {
+    lead: 'II',
+    hr: 80,
+    qrsInterval: 0.08,
+    beat: [],
+    markers: {},
+    targetPx: {},           // id -> {x, y} in CSS px
+    placements: {},         // id -> {x, y} | null (dans le bac)
+    labels: {},             // id -> { element, homeSlot }
+    dragging: null,
+    verified: false,
+    dims: { width: 0, height: 0, pixelsPerMm: 4, pixelsPerSecond: 100, pixelsPerMv: 40, centerY: 0, leftPad: 0 }
+  };
+
+  function setupCanvas() {
+    var rect = canvasZone.getBoundingClientRect();
+    var cssW = Math.max(1, Math.floor(rect.width));
+    var cssH = Math.max(1, Math.floor(rect.height));
+    var dpr = Math.max(1, window.devicePixelRatio || 1);
+
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    canvas.width = cssW * dpr;
+    canvas.height = cssH * dpr;
+    canvas.style.width = cssW + 'px';
+    canvas.style.height = cssH + 'px';
+    ctx.scale(dpr, dpr);
+
+    var pixelsPerMm = cssW / (VISIBLE_SECONDS * SWEEP_MM_PER_S);
+    state.dims = {
+      width: cssW,
+      height: cssH,
+      pixelsPerMm: pixelsPerMm,
+      pixelsPerSecond: pixelsPerMm * SWEEP_MM_PER_S,
+      pixelsPerMv: pixelsPerMm * GAIN_MM_PER_MV,
+      centerY: cssH / 2,
+      leftPad: 0
+    };
+  }
+
+  function drawGrid() {
+    var d = state.dims;
+    var w = d.width, h = d.height, pxmm = d.pixelsPerMm;
+
+    ctx.strokeStyle = '#ffc7d4';
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    for (var x = 0; x <= w + 0.5; x += pxmm) {
+      var xx = Math.round(x) + 0.5;
+      ctx.moveTo(xx, 0); ctx.lineTo(xx, h);
+    }
+    for (var y = 0; y <= h + 0.5; y += pxmm) {
+      var yy = Math.round(y) + 0.5;
+      ctx.moveTo(0, yy); ctx.lineTo(w, yy);
+    }
+    ctx.stroke();
+
+    ctx.strokeStyle = '#f78da3';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    var big = pxmm * 5;
+    for (var x = 0; x <= w + 0.5; x += big) {
+      var xx = Math.round(x) + 0.5;
+      ctx.moveTo(xx, 0); ctx.lineTo(xx, h);
+    }
+    for (var y = 0; y <= h + 0.5; y += big) {
+      var yy = Math.round(y) + 0.5;
+      ctx.moveTo(0, yy); ctx.lineTo(w, yy);
+    }
+    ctx.stroke();
+  }
+
+  // Convertit (t, mv) → (x, y) en pixels CSS
+  // t est en secondes depuis le début du battement affiché
+  function timeMvToPx(t, mv) {
+    var d = state.dims;
+    var x = t * d.pixelsPerSecond;
+    var y = d.centerY - mv * d.pixelsPerMv;
+    return { x: x, y: y };
+  }
+
+  function render() {
+    var d = state.dims;
+    var w = d.width, h = d.height;
+
+    ctx.fillStyle = '#fff8fa';
+    ctx.fillRect(0, 0, w, h);
+    drawGrid();
+
+    // Ligne isoélectrique (référence)
+    ctx.strokeStyle = 'rgba(0,0,0,0.08)';
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    ctx.moveTo(0, d.centerY);
+    ctx.lineTo(w, d.centerY);
+    ctx.stroke();
+
+    // Trace ECG
+    if (state.beat.length > 0) {
+      ctx.strokeStyle = '#0a0a0a';
+      ctx.lineWidth = 1.6;
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+
+      // On veut afficher ~2 battements : on boucle le beat sur VISIBLE_SECONDS
+      var totalT = VISIBLE_SECONDS;
+      var hrInterval = state.beat[state.beat.length - 1].t;
+      var step = 0.005; // 5 ms
+      var first = true;
+      for (var t = 0; t <= totalT; t += step) {
+        var tInBeat = t % hrInterval;
+        var mv = getMvAtTime(state.beat, tInBeat);
+        var x = t * d.pixelsPerSecond;
+        var y = d.centerY - mv * d.pixelsPerMv;
+        if (first) { ctx.moveTo(x, y); first = false; }
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+
+    // Recalcule les positions cibles (pixels CSS) pour les marqueurs
+    state.targetPx = {};
+    Object.keys(state.markers).forEach(function (id) {
+      var m = state.markers[id];
+      if (!m) return;
+      // Les marqueurs s'appliquent au 2e battement (t = hrInterval + t_marker)
+      var hrInterval = state.beat[state.beat.length - 1].t;
+      var tAbsolute = hrInterval + m.t;
+      if (tAbsolute > VISIBLE_SECONDS) tAbsolute = m.t; // fallback au 1er battement
+      var px = timeMvToPx(tAbsolute, m.mv);
+      state.targetPx[id] = px;
+    });
+
+    // Si vérifié : afficher les croix aux positions cibles manquées
+    Object.keys(state.targetPx).forEach(function (id) {
+      var marker = document.querySelector('.target-marker[data-id="' + id + '"]');
+      if (!marker) return;
+      var px = state.targetPx[id];
+      marker.style.left = px.x + 'px';
+      marker.style.top = px.y + 'px';
+      // Afficher seulement si l'étiquette correspondante est mal placée
+      var placement = state.placements[id];
+      var labelEl = state.labels[id] ? state.labels[id].element : null;
+      if (state.verified && placement && labelEl && labelEl.classList.contains('wrong')) {
+        marker.classList.add('shown');
+      } else if (state.verified && !placement) {
+        marker.classList.add('shown');
+      } else {
+        marker.classList.remove('shown');
+      }
+    });
+  }
+
+  function getMvAtTime(beat, t) {
+    if (beat.length === 0) return 0;
+    var hrInterval = beat[beat.length - 1].t;
+    if (hrInterval <= 0) return 0;
+    var tInBeat = t % hrInterval;
+    if (tInBeat < 0) tInBeat += hrInterval;
+    for (var i = 1; i < beat.length; i++) {
+      if (beat[i].t >= tInBeat) {
+        var a = beat[i - 1];
+        var b = beat[i];
+        var frac = (tInBeat - a.t) / Math.max(1e-6, b.t - a.t);
+        return a.mv + (b.mv - a.mv) * frac;
+      }
+    }
+    return beat[beat.length - 1].mv;
+  }
+
+  /* ==========================================================================
+   * Étiquettes (P, Q, R, S, J, T, U)
+   * ========================================================================== */
+
+  var MANDATORY_LABELS = ['P', 'Q', 'R', 'S', 'J', 'T'];
+  var OPTIONAL_LABEL_U = 'U';
+
+  function getActiveLabels() {
+    return MANDATORY_LABELS.concat([OPTIONAL_LABEL_U]);
+  }
+
+  function buildTray() {
+    var tray = document.getElementById('tray-slots');
+    tray.innerHTML = '';
+    // Vider l'overlay des anciennes étiquettes placées et des target-markers
+    overlay.querySelectorAll('.label').forEach(function (el) { el.remove(); });
+    overlay.querySelectorAll('.target-marker').forEach(function (el) { el.remove(); });
+    // Réinitialiser les références d'état
+    state.labels = {};
+    state.placements = {};
+
+    getActiveLabels().forEach(function (id) {
+      var slot = document.createElement('div');
+      slot.className = 'tray-slot';
+      slot.dataset.slot = id;
+      var label = document.createElement('div');
+      label.className = 'label color-' + id;
+      label.dataset.id = id;
+      label.textContent = id;
+      slot.appendChild(label);
+      tray.appendChild(slot);
+
+      // Créer le target-marker dans l'overlay
+      var marker = document.createElement('div');
+      marker.className = 'target-marker';
+      marker.dataset.id = id;
+      overlay.appendChild(marker);
+
+      state.labels[id] = { element: label, homeSlot: slot };
+      state.placements[id] = null;
+      label.addEventListener('pointerdown', onPointerDown);
+    });
+
+    // Mettre à jour le score "sur N"
+    document.getElementById('score').textContent = '— / ' + getActiveLabels().length;
+  }
+
+  /* ==========================================================================
+   * Drag-and-drop
+   * ========================================================================== */
+
+  function onPointerDown(e) {
+    if (state.verified) return;  // bloqué après vérification
+    var el = e.currentTarget;
+    var id = el.dataset.id;
+    e.preventDefault();
+    el.setPointerCapture && el.setPointerCapture(e.pointerId);
+
+    // Si l'étiquette était placée, libérer sa position
+    if (state.placements[id]) {
+      state.placements[id] = null;
+    }
+
+    var rect = el.getBoundingClientRect();
+    var centerX = rect.left + rect.width / 2;
+    var centerY = rect.top + rect.height / 2;
+    var offsetX = e.clientX - centerX;
+    var offsetY = e.clientY - centerY;
+
+    el.classList.remove('placed', 'correct', 'wrong');
+    el.classList.add('dragging');
+    el.style.position = 'fixed';
+    var halfW = el.offsetWidth / 2;
+    var halfH = el.offsetHeight / 2;
+    el.style.left = (e.clientX - offsetX - halfW) + 'px';
+    el.style.top = (e.clientY - offsetY - halfH) + 'px';
+    document.body.appendChild(el);
+
+    state.dragging = {
+      id: id,
+      offsetX: offsetX,
+      offsetY: offsetY,
+      halfW: halfW,
+      halfH: halfH,
+      pointerId: e.pointerId
+    };
+
+    document.addEventListener('pointermove', onPointerMove);
+    document.addEventListener('pointerup', onPointerUp);
+    document.addEventListener('pointercancel', onPointerUp);
+  }
+
+  function onPointerMove(e) {
+    if (!state.dragging) return;
+    e.preventDefault();
+    var d = state.dragging;
+    var el = state.labels[d.id].element;
+    el.style.left = (e.clientX - d.offsetX - d.halfW) + 'px';
+    el.style.top = (e.clientY - d.offsetY - d.halfH) + 'px';
+  }
+
+  function onPointerUp(e) {
+    if (!state.dragging) return;
+    document.removeEventListener('pointermove', onPointerMove);
+    document.removeEventListener('pointerup', onPointerUp);
+    document.removeEventListener('pointercancel', onPointerUp);
+
+    var d = state.dragging;
+    state.dragging = null;
+    var el = state.labels[d.id].element;
+    el.classList.remove('dragging');
+
+    // Vérifier si le lâcher est dans la zone canvas
+    var zoneRect = canvasZone.getBoundingClientRect();
+    if (e.clientX >= zoneRect.left && e.clientX <= zoneRect.right &&
+        e.clientY >= zoneRect.top && e.clientY <= zoneRect.bottom) {
+      // Position relative à la zone canvas (en px CSS)
+      var x = e.clientX - zoneRect.left;
+      var y = e.clientY - zoneRect.top;
+      placeLabel(d.id, x, y);
+    } else {
+      returnToTray(d.id);
+    }
+
+    render();
+  }
+
+  function placeLabel(id, x, y) {
+    var info = state.labels[id];
+    var el = info.element;
+    overlay.appendChild(el);
+    el.classList.add('placed');
+    el.style.position = 'absolute';
+    el.style.left = x + 'px';
+    el.style.top = y + 'px';
+    state.placements[id] = { x: x, y: y };
+  }
+
+  function returnToTray(id) {
+    var info = state.labels[id];
+    var el = info.element;
+    el.classList.remove('placed', 'correct', 'wrong');
+    el.style.position = '';
+    el.style.left = '';
+    el.style.top = '';
+    el.style.transform = '';
+    info.homeSlot.appendChild(el);
+    state.placements[id] = null;
+  }
+
+  /* ==========================================================================
+   * Validation
+   * ========================================================================== */
+
+  function check() {
+    var correct = 0;
+    var total = 0;
+    var activeLabels = getActiveLabels();
+    activeLabels.forEach(function (id) {
+      total++;
+      var info = state.labels[id];
+      var el = info.element;
+      el.classList.remove('correct', 'wrong');
+      var placement = state.placements[id];
+      if (!placement) {
+        el.classList.add('wrong');
+        return;
+      }
+      var target = state.targetPx[id];
+      if (!target) {
+        el.classList.add('wrong');
+        return;
+      }
+      var dx = placement.x - target.x;
+      var dy = placement.y - target.y;
+      var dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist <= TOLERANCE_PX) {
+        el.classList.add('correct');
+        // Snap précisément sur la cible
+        el.style.left = target.x + 'px';
+        el.style.top = target.y + 'px';
+        state.placements[id] = { x: target.x, y: target.y };
+        correct++;
+      } else {
+        el.classList.add('wrong');
+      }
+    });
+
+    state.verified = true;
+    document.getElementById('score').textContent = correct + ' / ' + total;
+
+    var msg = document.getElementById('message');
+    msg.classList.remove('success', 'error');
+    if (correct === total) {
+      msg.textContent = 'Parfait ! Toutes les étiquettes sont bien placées.';
+      msg.classList.add('success');
+    } else if (correct >= total * 0.6) {
+      msg.textContent = 'Bien. ' + (total - correct) + ' étiquette(s) à repositionner. Les croix indiquent les positions attendues.';
+      msg.classList.add('success');
+    } else {
+      msg.textContent = (total - correct) + ' étiquette(s) mal placée(s). Les croix indiquent les positions attendues.';
+      msg.classList.add('error');
+    }
+
+    document.getElementById('check-btn').hidden = true;
+    document.getElementById('reset-btn').hidden = false;
+
+    render();  // pour afficher les croix des positions manquées
+  }
+
+  function reset() {
+    Object.keys(state.labels).forEach(function (id) {
+      returnToTray(id);
+    });
+    state.verified = false;
+    document.getElementById('score').textContent = '— / ' + getActiveLabels().length;
+    var msg = document.getElementById('message');
+    msg.textContent = 'Glissez chaque étiquette sur le sommet correspondant du tracé.';
+    msg.classList.remove('success', 'error');
+    document.getElementById('check-btn').hidden = false;
+    document.getElementById('reset-btn').hidden = true;
+    render();
+  }
+
+  /* ==========================================================================
+   * Nouveau tracé — change la dérivation et/ou la FC
+   * ========================================================================== */
+
+  // Pool de dérivations qui donnent des morphologies variées et pédagogiques
+  var NEW_TRACE_POOL = ['I', 'II', 'III', 'aVL', 'aVF', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6'];
+
+  function newTrace() {
+    // Choisir une dérivation différente de la précédente
+    var lead;
+    do {
+      lead = NEW_TRACE_POOL[Math.floor(Math.random() * NEW_TRACE_POOL.length)];
+    } while (lead === state.lead && NEW_TRACE_POOL.length > 1);
+
+    // FC aléatoire entre 60 et 90
+    var hr = 60 + Math.floor(Math.random() * 31);
+
+    state.lead = lead;
+    state.hr = hr;
+
+    // Régénérer le battement
+    var result = generateBeatWithMarkers(lead, hr, state.qrsInterval);
+    state.beat = result.beat;
+    state.markers = result.markers;
+    state.verified = false;
+
+    // Mettre à jour l'affichage
+    document.getElementById('lead-display').textContent = LEAD_LABEL[lead];
+    document.getElementById('hr-display').textContent = hr + ' bpm';
+    document.getElementById('lead-name').textContent = LEAD_LABEL[lead];
+    document.getElementById('lead-desc').textContent = LEAD_DESC[lead];
+    document.getElementById('check-btn').hidden = false;
+    document.getElementById('reset-btn').hidden = true;
+    var msg = document.getElementById('message');
+    msg.textContent = 'Nouveau tracé : ' + LEAD_LABEL[lead] + ' à ' + hr + ' bpm. Placez les étiquettes.';
+    msg.classList.remove('success', 'error');
+
+    // Reconstruire le bac (réinitialise les placements)
+    buildTray();
+    render();
+  }
+
+  /* ==========================================================================
+   * Init
+   * ========================================================================== */
+
+  // État initial
+  var initial = generateBeatWithMarkers(state.lead, state.hr, state.qrsInterval);
+  state.beat = initial.beat;
+  state.markers = initial.markers;
+
+  buildTray();
+  setupCanvas();
+  render();
+
+  document.getElementById('check-btn').addEventListener('click', check);
+  document.getElementById('reset-btn').addEventListener('click', reset);
+  document.getElementById('new-trace-btn').addEventListener('click', newTrace);
+
+  // Recalculer au redimensionnement
+  if (window.ResizeObserver) {
+    var ro = new ResizeObserver(function () {
+      setupCanvas();
+      // Les positions placées ne sont plus valides après un resize — retour au bac
+      Object.keys(state.labels).forEach(function (id) {
+        if (state.placements[id]) returnToTray(id);
+      });
+      state.verified = false;
+      document.getElementById('check-btn').hidden = false;
+      document.getElementById('reset-btn').hidden = true;
+      document.getElementById('score').textContent = '— / ' + getActiveLabels().length;
+      render();
+    });
+    ro.observe(canvasZone);
+  } else {
+    window.addEventListener('resize', function () {
+      setupCanvas();
+      render();
+    });
+  }
+})();
+</script>
+</body>
+</html>
