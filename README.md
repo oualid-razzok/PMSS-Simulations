@@ -36,4 +36,6 @@ Please cite us as follows:
 *You can also use the "Cite this repository" button on the right sidebar of this GitHub page to generate a BibTeX or APA citation.*
 
 ## 📜 License
-This project is licensed under the **Creative Commons** License. You are free to share and adapt these materials for most purposes, provided you give appropriate credit.
+[![License: CC BY 4.0](https://shields.io)](https://creativecommons.org)
+This project is licensed under the terms of the **CC BY 4.0** license.
+
