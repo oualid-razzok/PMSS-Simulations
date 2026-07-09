@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PMSS - Simulations en Santé</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background: #f4f7f6; color: #333; }
+        h1 { text-align: center; color: #2c3e50; }
+        .subtitle { text-align: center; font-style: italic; color: #7f8c8d; margin-bottom: 30px;}
+        .app-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+        .app-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); text-align: center; }
+        .app-card h3 { margin-top: 0; color: #2980b9; }
+        .btn { display: inline-block; margin-top: 10px; padding: 10px 20px; background: #2980b9; color: white; text-decoration: none; border-radius: 5px; }
+        .btn:hover { background: #3498db; }
+        footer { text-align: center; margin-top: 40px; font-size: 0.9em; color: #7f8c8d; }
+    </style>
+</head>
+<body>
+
+    <h1>🇲🇦 PMSS</h1>
+    <p class="subtitle">La Plate-forme Marocaine de Simulation en Santé<br>"Simulation is a technique, not a technology."</p>
+
+    <div class="app-grid">
+        <div class="app-card">
+            <h3>Normal ECG Simulator</h3>
+            <p>Simulate and understand normal ECG waveforms.</p>
+            <a href="normal-ecg-simulateur.html" class="btn">Launch App</a>
+        </div>
+        <div class="app-card">
+            <h3>Cardiac Axis</h3>
+            <p>Interactive tool to determine the electrical axis.</p>
+            <a href="axe-cardiaque.html" class="btn">Launch App</a>
+        </div>
+        <div class="app-card">
+            <h3>Electrode Mapping</h3>
+            <p>Visualize ECG lead placements.</p>
+            <a href="carto-electrode.html" class="btn">Launch App</a>
+        </div>
+        <div class="app-card">
+            <h3>Wave Labeler</h3>
+            <p>Practice identifying P, QRS, and T waves.</p>
+            <a href="etiqueteur-ondes.html" class="btn">Launch App</a>
+        </div>
+        <div class="app-card">
+            <h3>Find the Error</h3>
+            <p>Diagnostic training for ECG abnormalities.</p>
+            <a href="trouver-erreur.html" class="btn">Launch App</a>
+        </div>
+    </div>
+
+    <footer>
+        <p>© 2026 PMSS (Oualid Razzok). Free for educational use.<br>
+        If used in a publication, please <a href="https://github.com/oualid-razzok/PMSS-Simulations">cite this repository</a>.</p>
+    </footer>
+
+</body>
+</html>
