@@ -261,6 +261,57 @@
   .label.color-T { background: #16a34a; }
   .label.color-U { background: #0891b2; }
 
+  /* Accessibilité clavier : anneau de focus visible uniquement au clavier */
+  .label:focus-visible {
+    outline: 3px solid #1a1a1a;
+    outline-offset: 2px;
+    z-index: 20;
+  }
+  /* Curseur fantôme pour le mode déplacement clavier : cercle pointillé
+     qui montre où l'étiquette sera posée. */
+  .kbd-cursor {
+    position: absolute;
+    width: 28px;
+    height: 28px;
+    border: 2px dashed #1a1a1a;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    z-index: 15;
+    background: rgba(26, 26, 26, 0.08);
+    display: none;
+  }
+  @media (max-width: 600px) {
+    .kbd-cursor { width: 24px; height: 24px; }
+  }
+  @media (max-width: 400px) {
+    .kbd-cursor { width: 20px; height: 20px; }
+  }
+
+  /* ===== Responsive : les étiquettes rétrécissent sur petit écran ===== */
+  /* Avant ce fixe, les étiquettes restaient à 28px même sur téléphone, ce qui
+     rendait le placement difficile car le canvas ECG rétrécissait mais pas les
+     étiquettes. On ajoute deux paliers (tablette / téléphone) pour que les
+     étiquettes et les croix de cible suivent la même échelle que le canvas. */
+  @media (max-width: 600px) {
+    .label { width: 24px; height: 24px; font-size: 11px; }
+    .tray-slot { width: 30px; height: 30px; }
+    .tray-slot .label { width: 24px; height: 24px; }
+    .target-marker { width: 12px; height: 12px; }
+    .target-marker::before { width: 1.2px; }
+    .target-marker::after { height: 1.2px; }
+    .tray { padding: 8px 10px; gap: 6px; min-height: 48px; }
+    .tray-slots { gap: 6px; }
+  }
+  @media (max-width: 400px) {
+    .label { width: 20px; height: 20px; font-size: 10px; }
+    .tray-slot { width: 26px; height: 26px; }
+    .tray-slot .label { width: 20px; height: 20px; }
+    .target-marker { width: 10px; height: 10px; }
+    .tray { padding: 6px 8px; gap: 4px; min-height: 40px; }
+    .tray-slots { gap: 4px; }
+  }
+
   /* ===== Pied de page ===== */
   .app-footer {
     padding: 10px 16px;
@@ -491,22 +542,32 @@
     append(line(pr / 3, 0 + coeff[WP.PR], cursor.mv));
 
     // — Q — durée QRS/4, amp -0,05
+    // L'amplitude Q est NÉGATIVE (-0,05 * coeff) : quand coeff > 0, l'onde
+    // descend → le marqueur doit être au MINIMUM (point le plus bas).
     var qStart = cursor.t;
     var qPts = line(qrsInterval / 4, -0.05 * coeff[WP.Q], cursor.mv);
     append(qPts);
-    markers.Q = findExtremum(qPts, qStart, coeff[WP.Q] > 0 ? 'max' : 'min');
+    markers.Q = findExtremum(qPts, qStart, coeff[WP.Q] > 0 ? 'min' : 'max');
 
     // — R — durée QRS/4, amp 0,9
+    // L'amplitude R est POSITIVE (0,9 * coeff) : quand coeff > 0, l'onde
+    // monte → le marqueur doit être au MAXIMUM (point le plus haut).
     var rStart = cursor.t;
     var rPts = line(qrsInterval / 4, 0.9 * coeff[WP.R], cursor.mv);
     append(rPts);
     markers.R = findExtremum(rPts, rStart, coeff[WP.R] > 0 ? 'max' : 'min');
 
     // — S — durée QRS/4, amp -0,3
+    // L'amplitude S est NÉGATIVE (-0,3 * coeff) : quand coeff > 0, l'onde
+    // descend → le marqueur doit être au MINIMUM (point le plus bas, le creux
+    // de l'onde S). Avant ce fixe, le code utilisait 'max' qui plaçait le
+    // marqueur au DÉBUT du segment S (c.-à-d. au sommet du R), ce qui était
+    // incorrect — surtout visible en DII où l'onde S est clairement sous
+    // la ligne isoélectrique.
     var sStart = cursor.t;
     var sPts = line(qrsInterval / 4, -0.3 * coeff[WP.S], cursor.mv);
     append(sPts);
-    markers.S = findExtremum(sPts, sStart, coeff[WP.S] > 0 ? 'max' : 'min');
+    markers.S = findExtremum(sPts, sStart, coeff[WP.S] > 0 ? 'min' : 'max');
 
     // — J — durée QRS/4, amp -0,1
     var jStart = cursor.t;
@@ -559,10 +620,11 @@
    * Composant d'affichage — ECG figé
    * ========================================================================== */
 
-  var VISIBLE_SECONDS = 2.4;   // fenêtre affichée (2 battements à 50 bpm, plus à 80)
+  var VISIBLE_SECONDS = 2.4;   // valeur par défaut, recalculée dynamiquement (1 battement)
   var SWEEP_MM_PER_S = 25;
   var GAIN_MM_PER_MV = 10;
-  var TOLERANCE_PX = 25;       // tolérance de positionnement (±25 px)
+  var TOLERANCE_PX = 25;       // tolérance de positionnement (rayon en px)
+  var TRACE_PADDING_PX = 12;   // marge gauche/droite autour du tracé
 
   var canvas = document.getElementById('ecg-canvas');
   var ctx = canvas.getContext('2d');
@@ -596,15 +658,39 @@
     canvas.style.height = cssH + 'px';
     ctx.scale(dpr, dpr);
 
-    var pixelsPerMm = cssW / (VISIBLE_SECONDS * SWEEP_MM_PER_S);
+    // VISIBLE_SECONDS = durée d'un battement (hrInterval) — on affiche UN
+    // seul battement complet, pas plusieurs. La trace remplit toute la
+    // largeur du canvas (avec une petite marge de chaque côté).
+    var hrInterval = state.beat.length > 0
+      ? state.beat[state.beat.length - 1].t
+      : 60 / Math.max(1, state.hr);
+    VISIBLE_SECONDS = Math.max(0.5, hrInterval);
+
+    // Échelle horizontale : le battement remplit la largeur utile
+    var usableW = Math.max(50, cssW - 2 * TRACE_PADDING_PX);
+    var pixelsPerMmTime = usableW / (VISIBLE_SECONDS * SWEEP_MM_PER_S);
+
+    // Échelle verticale : on calcule pixelsPerMv INDEPENDAMMENT pour garantir
+    // que le R-wave (amplitude max ~1.0 mV) tient dans la moitié du canvas.
+    // Avec un battement unique qui remplit toute la largeur, l'échelle
+    // horizontale serait trop grande (pixelsPerMm ≈ 62 → pixelsPerMv ≈ 626,
+    // ce qui fait sortir le R-wave du canvas). On plafonne pixelsPerMv à
+    // hauteur_max / amplitude_max, soit (cssH/2 - marge) / 1.1.
+    var VERT_MARGIN_PX = 20;
+    var maxAmplitudeMv = 1.1;  // R-wave peut atteindre ~1.0 mV + marge de sécurité
+    var maxPixelsPerMv = Math.max(20, (cssH / 2 - VERT_MARGIN_PX) / maxAmplitudeMv);
+    // pixelsPerMv = pixelsPerMm * GAIN_MM_PER_MV, mais on plafonne pour que
+    // le tracé tienne verticalement.
+    var pixelsPerMv = Math.min(pixelsPerMmTime * GAIN_MM_PER_MV, maxPixelsPerMv);
+
     state.dims = {
       width: cssW,
       height: cssH,
-      pixelsPerMm: pixelsPerMm,
-      pixelsPerSecond: pixelsPerMm * SWEEP_MM_PER_S,
-      pixelsPerMv: pixelsPerMm * GAIN_MM_PER_MV,
+      pixelsPerMm: pixelsPerMmTime,
+      pixelsPerSecond: pixelsPerMmTime * SWEEP_MM_PER_S,
+      pixelsPerMv: pixelsPerMv,
       centerY: cssH / 2,
-      leftPad: 0
+      leftPad: TRACE_PADDING_PX
     };
   }
 
@@ -644,7 +730,7 @@
   // t est en secondes depuis le début du battement affiché
   function timeMvToPx(t, mv) {
     var d = state.dims;
-    var x = t * d.pixelsPerSecond;
+    var x = d.leftPad + t * d.pixelsPerSecond;
     var y = d.centerY - mv * d.pixelsPerMv;
     return { x: x, y: y };
   }
@@ -665,7 +751,44 @@
     ctx.lineTo(w, d.centerY);
     ctx.stroke();
 
-    // Trace ECG
+    // Recalcule les positions cibles (pixels CSS) pour les marqueurs
+    // AVANT de dessiner la trace, pour pouvoir dessiner les zones de tolérance
+    // par-dessus la grille mais sous la trace.
+    state.targetPx = {};
+    Object.keys(state.markers).forEach(function (id) {
+      var m = state.markers[id];
+      if (!m) return;
+      // On affiche UN seul battement : les marqueurs sont sur ce battement
+      // (t = m.t, pas hrInterval + m.t comme avant).
+      var px = timeMvToPx(m.t, m.mv);
+      state.targetPx[id] = px;
+    });
+
+    // Zones de tolérance (grace zones) : cercles translucides autour de chaque
+    // position cible. AFFICHÉES UNIQUEMENT APRÈS VALIDATION (state.verified)
+    // — avant validation, l'apprenant doit réfléchir sans aide visuelle.
+    // Après validation, les cercles montrent où étaient les positions
+    // correctes (en complément des croix des target-markers).
+    if (state.verified) {
+      Object.keys(state.targetPx).forEach(function (id) {
+        var px = state.targetPx[id];
+        // Cercle de fond (très translucide)
+        ctx.fillStyle = 'rgba(22, 163, 74, 0.08)';
+        ctx.beginPath();
+        ctx.arc(px.x, px.y, TOLERANCE_PX, 0, Math.PI * 2);
+        ctx.fill();
+        // Contour pointillé
+        ctx.strokeStyle = 'rgba(22, 163, 74, 0.35)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        ctx.arc(px.x, px.y, TOLERANCE_PX, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      });
+    }
+
+    // Trace ECG — UN seul battement (pas de boucle sur plusieurs battements)
     if (state.beat.length > 0) {
       ctx.strokeStyle = '#0a0a0a';
       ctx.lineWidth = 1.6;
@@ -673,34 +796,18 @@
       ctx.lineCap = 'round';
       ctx.beginPath();
 
-      // On veut afficher ~2 battements : on boucle le beat sur VISIBLE_SECONDS
-      var totalT = VISIBLE_SECONDS;
       var hrInterval = state.beat[state.beat.length - 1].t;
-      var step = 0.005; // 5 ms
+      var totalT = Math.min(VISIBLE_SECONDS, hrInterval);
+      var step = 0.004; // 4 ms
       var first = true;
       for (var t = 0; t <= totalT; t += step) {
-        var tInBeat = t % hrInterval;
-        var mv = getMvAtTime(state.beat, tInBeat);
-        var x = t * d.pixelsPerSecond;
-        var y = d.centerY - mv * d.pixelsPerMv;
-        if (first) { ctx.moveTo(x, y); first = false; }
-        else ctx.lineTo(x, y);
+        var mv = getMvAtTime(state.beat, t);
+        var px = timeMvToPx(t, mv);
+        if (first) { ctx.moveTo(px.x, px.y); first = false; }
+        else ctx.lineTo(px.x, px.y);
       }
       ctx.stroke();
     }
-
-    // Recalcule les positions cibles (pixels CSS) pour les marqueurs
-    state.targetPx = {};
-    Object.keys(state.markers).forEach(function (id) {
-      var m = state.markers[id];
-      if (!m) return;
-      // Les marqueurs s'appliquent au 2e battement (t = hrInterval + t_marker)
-      var hrInterval = state.beat[state.beat.length - 1].t;
-      var tAbsolute = hrInterval + m.t;
-      if (tAbsolute > VISIBLE_SECONDS) tAbsolute = m.t; // fallback au 1er battement
-      var px = timeMvToPx(tAbsolute, m.mv);
-      state.targetPx[id] = px;
-    });
 
     // Si vérifié : afficher les croix aux positions cibles manquées
     Object.keys(state.targetPx).forEach(function (id) {
@@ -746,8 +853,19 @@
   var MANDATORY_LABELS = ['P', 'Q', 'R', 'S', 'J', 'T'];
   var OPTIONAL_LABEL_U = 'U';
 
+  // Renvoie la liste des étiquettes actives pour le tracé courant.
+  // L'onde U n'est proposée que si elle a effectivement été générée
+  // (à FC élevée, hrInterval est trop court pour loger une onde U
+  // et state.markers.U reste indéfini — cf. generateBeatWithMarkers).
+  // Avant ce fixe, l'étiquette U était toujours présente dans le bac,
+  // ce qui rendait le score parfait impossible pour ~1/3 des tracés
+  // aléatoires (HR 88-90 bpm).
   function getActiveLabels() {
-    return MANDATORY_LABELS.concat([OPTIONAL_LABEL_U]);
+    var labels = MANDATORY_LABELS.slice();
+    if (state.markers && state.markers.U) {
+      labels.push(OPTIONAL_LABEL_U);
+    }
+    return labels;
   }
 
   function buildTray() {
@@ -768,6 +886,13 @@
       label.className = 'label color-' + id;
       label.dataset.id = id;
       label.textContent = id;
+      // Accessibilité clavier : l'étiquette est focalisable.
+      // Tab navigue entre les étiquettes, Entrée/Espace démarre le mode
+      // déplacement clavier (cureur virtuel + flèches + Entrée pour poser).
+      label.setAttribute('tabindex', '0');
+      label.setAttribute('role', 'button');
+      label.setAttribute('aria-label',
+        'Étiquette ' + id + ' — Entrée pour la saisir, puis flèches pour déplacer, Entrée pour poser, Échap pour annuler');
       slot.appendChild(label);
       tray.appendChild(slot);
 
@@ -780,6 +905,7 @@
       state.labels[id] = { element: label, homeSlot: slot };
       state.placements[id] = null;
       label.addEventListener('pointerdown', onPointerDown);
+      label.addEventListener('keydown', makeLabelKeydownHandler(id));
     });
 
     // Mettre à jour le score "sur N"
@@ -890,6 +1016,169 @@
   }
 
   /* ==========================================================================
+   * Drag-and-drop au clavier (accessibilité)
+   * -------------------------------------------------------------------------
+   * Pattern : Tab focalise une étiquette → Entrée/Espace la « saisit »
+   * (un curseur virtuel apparaît au centre du canvas) → flèches déplacent le
+   * curseur → Entrée pose l'étiquette à la position du curseur → Échap annule
+   * (retour au bac ou à la position précédente).
+   * ========================================================================== */
+
+  var KBD_STEP_PX = 10;           // pas de déplacement par pression de flèche
+  var kbdGhost = null;            // élément visuel du curseur clavier
+  var kbdState = null;            // { id, prevPlacement, x, y } ou null
+
+  function ensureKbdGhost() {
+    if (kbdGhost) return kbdGhost;
+    kbdGhost = document.createElement('div');
+    kbdGhost.className = 'kbd-cursor';
+    kbdGhost.setAttribute('aria-hidden', 'true');
+    overlay.appendChild(kbdGhost);
+    return kbdGhost;
+  }
+
+  function showKbdGhost(x, y, labelId) {
+    var g = ensureKbdGhost();
+    g.style.left = x + 'px';
+    g.style.top = y + 'px';
+    g.setAttribute('data-label', labelId);
+    g.style.display = 'block';
+  }
+
+  function hideKbdGhost() {
+    if (kbdGhost) kbdGhost.style.display = 'none';
+  }
+
+  function makeLabelKeydownHandler(id) {
+    return function (e) {
+      if (state.verified) return;
+      var el = state.labels[id].element;
+
+      // Si on n'est pas encore en mode déplacement clavier
+      if (!kbdState || kbdState.id !== id) {
+        if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+          e.preventDefault();
+          startKbdDrag(id);
+        }
+        return;
+      }
+
+      // Mode déplacement clavier actif pour cette étiquette
+      switch (e.key) {
+        case 'ArrowLeft':
+          e.preventDefault();
+          kbdState.x = Math.max(0, kbdState.x - KBD_STEP_PX);
+          updateKbdCursor();
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          kbdState.x = Math.min(state.dims.width - 1, kbdState.x + KBD_STEP_PX);
+          updateKbdCursor();
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          kbdState.y = Math.max(0, kbdState.y - KBD_STEP_PX);
+          updateKbdCursor();
+          break;
+        case 'ArrowDown':
+          e.preventDefault();
+          kbdState.y = Math.min(state.dims.height - 1, kbdState.y + KBD_STEP_PX);
+          updateKbdCursor();
+          break;
+        case 'Enter':
+        case ' ':
+        case 'Spacebar':
+          e.preventDefault();
+          confirmKbdDrop();
+          break;
+        case 'Escape':
+          e.preventDefault();
+          cancelKbdDrag();
+          break;
+      }
+    };
+  }
+
+  function startKbdDrag(id) {
+    var el = state.labels[id].element;
+    // Mémoriser la position précédente pour pouvoir annuler
+    var prevPlacement = state.placements[id] ? {
+      x: state.placements[id].x,
+      y: state.placements[id].y
+    } : null;
+
+    // Position de départ du curseur : centre du canvas
+    var zoneRect = canvasZone.getBoundingClientRect();
+    var startX = state.dims.width / 2;
+    var startY = state.dims.height / 2;
+
+    // Si l'étiquette était déjà placée, démarrer le curseur à sa position actuelle
+    if (prevPlacement) {
+      startX = prevPlacement.x;
+      startY = prevPlacement.y;
+    }
+
+    kbdState = { id: id, prevPlacement: prevPlacement, x: startX, y: startY };
+
+    // Retirer l'étiquette de sa position actuelle et la faire suivre le curseur
+    if (state.placements[id]) state.placements[id] = null;
+    el.classList.remove('placed', 'correct', 'wrong');
+    el.classList.add('dragging');
+    overlay.appendChild(el);
+
+    updateKbdCursor();
+    el.focus();
+  }
+
+  function updateKbdCursor() {
+    if (!kbdState) return;
+    var el = state.labels[kbdState.id].element;
+    // L'étiquette suit le curseur virtuel
+    el.style.position = 'absolute';
+    el.style.left = kbdState.x + 'px';
+    el.style.top = kbdState.y + 'px';
+    // Le ghost visuel (cercle pointillé) aide à voir la position du curseur
+    showKbdGhost(kbdState.x, kbdState.y, kbdState.id);
+  }
+
+  function confirmKbdDrop() {
+    if (!kbdState) return;
+    var id = kbdState.id;
+    var x = kbdState.x;
+    var y = kbdState.y;
+    kbdState = null;
+    hideKbdGhost();
+
+    var el = state.labels[id].element;
+    el.classList.remove('dragging');
+    el.setAttribute('aria-label',
+      'Étiquette ' + id + ' placée. Entrée pour la saisir à nouveau et la déplacer.');
+    placeLabel(id, x, y);
+    el.focus();
+    render();
+  }
+
+  function cancelKbdDrag() {
+    if (!kbdState) return;
+    var id = kbdState.id;
+    var prev = kbdState.prevPlacement;
+    kbdState = null;
+    hideKbdGhost();
+
+    var el = state.labels[id].element;
+    el.classList.remove('dragging');
+    if (prev) {
+      // Restaurer la position précédente
+      placeLabel(id, prev.x, prev.y);
+    } else {
+      // Retour au bac
+      returnToTray(id);
+    }
+    el.focus();
+    render();
+  }
+
+  /* ==========================================================================
    * Validation
    * ========================================================================== */
 
@@ -950,6 +1239,9 @@
   }
 
   function reset() {
+    // Annuler tout déplacement clavier en cours
+    kbdState = null;
+    hideKbdGhost();
     Object.keys(state.labels).forEach(function (id) {
       returnToTray(id);
     });
@@ -1002,6 +1294,7 @@
 
     // Reconstruire le bac (réinitialise les placements)
     buildTray();
+    setupCanvas();  // recalcule VISIBLE_SECONDS et pixelsPerMm pour le nouveau HR
     render();
   }
 
