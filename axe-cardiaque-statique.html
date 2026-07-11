@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Axe cardiaque (statique) — Dérivations frontales</title>
+<style>
+  /* ===== Reset & base ===== */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: #f5f5f5;
+    color: #1a1a1a;
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    padding: 16px;
+    display: flex;
+    justify-content: center;
+    align-items: stretch;
+    overflow: hidden;
+  }
+
+  /* ===== Conteneur principal (responsive, pas de taille fixe) ===== */
+  .app {
+    width: 100%;
+    max-width: 1200px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: #ffffff;
+    border: 1px solid #e5e5e5;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.03);
+    overflow: hidden;
+  }
+
+  /* ===== En-tête ===== */
+  .app-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid #e5e5e5;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .app-title { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .app-title h1 {
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: #1a1a1a;
+  }
+  .app-title .subtitle {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #737373;
+  }
+  .app-title .badge {
+    font-size: 10px;
+    font-weight: 600;
+    color: #1a1a1a;
+    padding: 2px 8px;
+    background: #fee2e2;
+    border: 1px solid #fecaca;
+    border-radius: 999px;
+  }
+  .axis-info {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .axis-info .label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #737373;
+  }
+  .axis-info .angle {
+    font-family: ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
+    font-size: 18px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: #1a1a1a;
+  }
+  .axis-info .classification {
+    font-size: 12px;
+    font-weight: 600;
+    color: #1a1a1a;
+    padding: 3px 10px;
+    background: #f5f5f5;
+    border-radius: 999px;
+    border: 1px solid #e5e5e5;
+  }
+
+  /* ===== Grille principale : diagramme | ECG ===== */
+  .main-grid {
+    flex: 1 1 0;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(280px, 1fr) minmax(380px, 1.5fr);
+  }
+  @media (max-width: 820px) {
+    .main-grid {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto minmax(240px, 1fr);
+    }
+  }
+
+  /* ===== Panneau diagramme (gauche) ===== */
+  .diagram-panel {
+    padding: 16px;
+    border-right: 1px solid #e5e5e5;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-height: 0;
+    overflow: hidden;
+  }
+  @media (max-width: 820px) {
+    .diagram-panel {
+      border-right: none;
+      border-bottom: 1px solid #e5e5e5;
+      justify-content: flex-start;
+    }
+  }
+  .diagram-wrap {
+    width: 100%;
+    max-width: 400px;
+    max-height: 100%;
+    aspect-ratio: 1 / 1;
+    position: relative;
+    flex: 0 1 auto;
+  }
+  @media (max-width: 820px) {
+    .diagram-wrap { max-width: 280px; }
+  }
+  .diagram-wrap svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+    cursor: grab;
+    touch-action: none;
+    outline: none;
+  }
+  .diagram-wrap svg:active { cursor: grabbing; }
+  .diagram-wrap svg:focus-visible {
+    outline: 2px solid #1a1a1a;
+    outline-offset: 2px;
+    border-radius: 8px;
+  }
+  .diagram-caption {
+    flex: 0 0 auto;
+    font-size: 11px;
+    color: #737373;
+    text-align: center;
+    line-height: 1.5;
+    max-width: 340px;
+  }
+  .diagram-caption kbd {
+    display: inline-block;
+    padding: 1px 5px;
+    background: #f5f5f5;
+    border: 1px solid #d4d4d4;
+    border-bottom-width: 2px;
+    border-radius: 3px;
+    font-family: ui-monospace, monospace;
+    font-size: 10px;
+    color: #404040;
+  }
+
+  /* ===== Panneau ECG (droite) ===== */
+  .ecg-panel {
+    display: flex;
+    flex-direction: column;
+    background: #fafafa;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .ecg-row {
+    flex: 1 1 0;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 50px 1fr;
+    border-bottom: 1px solid #e5e5e5;
+  }
+  .ecg-row:last-child { border-bottom: none; }
+  .ecg-row .lead-label {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: #f5f5f5;
+    border-right: 1px solid #e5e5e5;
+    font-family: ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
+    gap: 1px;
+  }
+  .ecg-row .lead-label .name {
+    font-size: 15px;
+    font-weight: 700;
+    color: #1a1a1a;
+  }
+  .ecg-row .lead-label .angle {
+    font-size: 9px;
+    color: #737373;
+  }
+  .ecg-row .canvas-wrap {
+    position: relative;
+    overflow: hidden;
+    background: #fff8fa;
+    min-height: 0;
+  }
+  .ecg-row canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+  .ecg-row .scale-anno {
+    position: absolute;
+    bottom: 2px;
+    right: 6px;
+    font-size: 8px;
+    color: #b0b0b0;
+    font-family: ui-monospace, monospace;
+    pointer-events: none;
+    user-select: none;
+  }
+</style>
+</head>
+<body>
+  <main class="app">
+    <!-- En-tête : titre + infos axe -->
+    <header class="app-header">
+      <div class="app-title">
+        <h1>Axe cardiaque</h1>
+        <span class="subtitle">Dérivations frontales</span>
+        <span class="badge">Tracé statique</span>
+      </div>
+      <div class="axis-info">
+        <span class="label">Axe QRS :</span>
+        <span class="angle" id="axis-angle">+60°</span>
+        <span class="classification" id="axis-class">Axe normal</span>
+      </div>
+    </header>
+
+    <div class="main-grid">
+      <!-- Diagramme hexaxial interactif -->
+      <section class="diagram-panel" aria-label="Diagramme hexaxial interactif">
+        <div class="diagram-wrap">
+          <svg id="hexaxial-svg" viewBox="-160 -160 320 320" xmlns="http://www.w3.org/2000/svg"
+               role="slider" aria-label="Axe électrique cardiaque"
+               aria-valuemin="-180" aria-valuemax="180" aria-valuenow="60" tabindex="0">
+            <!-- Définitions : pointe de flèche réutilisable -->
+            <defs>
+              <marker id="arrowhead" markerWidth="12" markerHeight="12"
+                      refX="10" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+                <path d="M 0,0 L 10,4 L 0,8 Z" fill="#dc2626"/>
+              </marker>
+            </defs>
+
+            <!-- Cercle extérieur (référence hexaxiale) -->
+            <circle cx="0" cy="0" r="140" fill="#fff8fa" stroke="#e5e5e5" stroke-width="1"/>
+
+            <!-- Arc vert indiquant la plage d'axe normal (-30° à +90°) -->
+            <path id="normal-arc" fill="none" stroke="#22c55e" stroke-width="3"
+                  stroke-linecap="round" opacity="0.35"/>
+
+            <!-- Lignes d'axes des dérivations (tirets gris) -->
+            <g id="lead-axes" stroke="#d4d4d4" stroke-width="1"></g>
+
+            <!-- Étiquettes des dérivations -->
+            <g id="lead-labels" font-family="ui-monospace, monospace" font-size="13"
+               font-weight="600" fill="#404040" text-anchor="middle"
+               dominant-baseline="middle"></g>
+
+            <!-- Cœur central -->
+            <g id="heart">
+              <path d="M 0,22 C -20,8 -32,-6 -32,-18 C -32,-30 -20,-34 -12,-30
+                       C -6,-26 -1,-20 0,-15 C 1,-20 6,-26 12,-30
+                       C 20,-34 32,-30 32,-18 C 32,-6 20,8 0,22 Z"
+                    fill="#fee2e2" stroke="#dc2626" stroke-width="1.5"/>
+            </g>
+
+            <!-- Flèche de l'axe (mise à jour dynamiquement) -->
+            <g id="axis-arrow">
+              <circle cx="0" cy="0" r="5" fill="#dc2626"/>
+              <line id="arrow-line" x1="0" y1="0" x2="0" y2="-125"
+                    stroke="#dc2626" stroke-width="3" stroke-linecap="round"
+                    marker-end="url(#arrowhead)"/>
+            </g>
+          </svg>
+        </div>
+        <p class="diagram-caption">
+          Glissez la flèche rouge pour modifier l'axe électrique du cœur.
+          Les 6 dérivations frontales se redessinent instantanément.<br>
+          Au clavier : <kbd>←</kbd> <kbd>→</kbd> pour ajuster par 5°.
+        </p>
+      </section>
+
+      <!-- Panneau ECG : 6 dérivations frontales simultanées (tracés statiques) -->
+      <section class="ecg-panel" id="ecg-panel" aria-label="Dérivations frontales"></section>
+    </div>
+  </main>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ============================================================================
+   * Définitions des dérivations frontales et de leurs angles hexaxiaux
+   * Convention clinique : 0° = gauche du patient, +90° = vers les pieds
+   * ========================================================================== */
+  var FRONTAL_LEADS = [
+    { id: 'I',   label: 'DI',  angle: 0    },
+    { id: 'aVL', label: 'aVL', angle: -30  },
+    { id: 'II',  label: 'DII', angle: 60   },
+    { id: 'aVF', label: 'aVF', angle: 90   },
+    { id: 'III', label: 'DIII',angle: 120  },
+    { id: 'aVR', label: 'aVR', angle: -150 }
+  ];
+
+  // Coefficients de base par dérivation (portés de baseLeadCoeff)
+  // Colonnes : QRST, P, Q, R, S, J, T, PR, ST, TP
+  var WP = { QRST:0, P:1, Q:2, R:3, S:4, J:5, T:6, PR:7, ST:8, TP:9 };
+
+  var baseLeadCoeff = {
+    I:   [0.7,   0.7,  0.7,  0.7,  0.7,  0.7,  0.8,  0,   0,   0],
+    II:  [1.0,   1.0,  1.0,  1.0,  1.0,  1.0,  1.0,  0,   0,   0],
+    III: [0.5,   0.5,  0.5,  0.5,  0.5,  0.5,  0.2,  0,   0,   0],
+    aVR: [-0.9, -1.0, -1.0, -0.8, -1.0, -1.0, -0.9,  0,   0,   0],
+    aVL: [0.2,  -1.0,  0.3,  0.2,  0.4,  0.3,  0.6,  0,   0,   0],
+    aVF: [0.8,   0.7,  0.8,  0.8,  0.8,  0.8,  0.4,  0,   0,   0]
+  };
+
+  /* ============================================================================
+   * Génération de la forme d'onde — portée de Infirmary Integrated
+   * ========================================================================== */
+
+  function bezier(p0, p1, p2, pct) {
+    var inv = 1 - pct;
+    return {
+      t:  p0.t  * inv * inv + 2 * p1.t  * pct * inv + p2.t  * pct * pct,
+      mv: p0.mv * inv * inv + 2 * p1.mv * pct * inv + p2.mv * pct * pct
+    };
+  }
+
+  function peak(length, mv, mvEnd, startMv) {
+    if (length <= 0) return [];
+    var out = [];
+    var RES_MS = 10;
+    var res = (2 * (RES_MS / 1000)) / length;
+    for (var i = 1; i * res <= 1; i++) {
+      out.push(bezier(
+        { t: 0, mv: startMv },
+        { t: length / 3, mv: mv },
+        { t: length / 2, mv: mv },
+        i * res
+      ));
+    }
+    for (var i = 1; i * res <= 1; i++) {
+      out.push(bezier(
+        { t: length / 2, mv: mv },
+        { t: (length * 3) / 5, mv: mv },
+        { t: length, mv: mvEnd },
+        i * res
+      ));
+    }
+    out.push({ t: length, mv: mvEnd });
+    return out;
+  }
+
+  function line(length, mv, startMv) {
+    if (length <= 0) return [];
+    var out = [];
+    var RES_MS = 10;
+    var step = RES_MS / 1000;
+    for (var t = step; t <= length; t += step) {
+      out.push({ t: t, mv: startMv + (mv - startMv) * (t / length) });
+    }
+    out.push({ t: length, mv: mv });
+    return out;
+  }
+
+  /* Génère un battement pour une dérivation, modulé par l'axe cardiaque.
+   *
+   * axisCoeff = cos(angle_axe - angle_dérivation) — projection du vecteur
+   * cardiaque sur l'axe de la dérivation. Quand axisCoeff est négatif, tout
+   * le complexe s'inverse (R devient S, etc.). Quand axisCoeff ≈ 0, le complexe
+   * devient biphasique isovoltique : en clinique, une dérivation perpendiculaire
+   * à l'axe cardiaque ne montre JAMAIS un tracé parfaitement plat — le front de
+   * dépolarisation traverse la dérivation, ce qui produit un petit QRS biphasique
+   * (petit R suivi d'un petit S d'amplitude à peu près égale, aire nette ≈ 0).
+   *
+   * On modélise donc une activité résiduelle qui :
+   *   - est maximale quand |axisCoeff| → 0 (perpendiculaire)
+   *   - s'annule quand |axisCoeff| → 1 (parallèle, la projection domine)
+   *   - est appliquée aux ondes R (positive) et S (négative) pour créer le
+   *     pattern biphasique attendu ; les ondes P et T (monophasiques) restent
+   *     multipliées par axisCoeff car elles s'annulent naturellement quand
+   *     la dérivation est perpendiculaire (ce qui est cliniquement correct). */
+  function generateBeat(lead, axisCoeff, hr, qrsInterval) {
+    hr = hr || 80;
+    qrsInterval = qrsInterval || 0.08;
+    var hrInterval = 60 / Math.max(1, hr);
+
+    var prFrac = Math.min(1, Math.max(0, (hr - 60) / (160 - 60)));
+    var pr = 0.16 + (0.20 - 0.16) * prFrac;
+
+    var qt = Math.min(1, Math.max(0.1, 3.3 * qrsInterval));
+    var stInterval = Math.max(0, qt - qrsInterval);
+    var stSegment = stInterval * (1 / 3);
+    var tInterval = stInterval * (2 / 3);
+
+    var coeff = baseLeadCoeff[lead];
+    var beat = [];
+    var cursor = { t: 0, mv: 0 };
+
+    function append(pts) {
+      for (var i = 0; i < pts.length; i++) {
+        beat.push({ t: cursor.t + pts[i].t, mv: pts[i].mv });
+      }
+      if (pts.length > 0) {
+        cursor = {
+          t: cursor.t + pts[pts.length - 1].t,
+          mv: pts[pts.length - 1].mv
+        };
+      }
+    }
+
+    // Activité résiduelle : (1 - |axisCoeff|)² produit une courbe en cloche
+    // qui vaut 1 quand axisCoeff = 0 et ~0 dès que |axisCoeff| > 0.4.
+    var RESIDUAL_AMP = 0.08;
+    var residual = Math.pow(1 - Math.abs(axisCoeff), 2) * RESIDUAL_AMP;
+    var rSign = coeff[WP.R] >= 0 ? 1 : -1;
+
+    // Ondes P et T : multipliées par axisCoeff uniquement.
+    append(peak((pr * 2) / 3, 0.1 * coeff[WP.P] * axisCoeff, 0, cursor.mv));
+    append(line(pr / 3, 0 + coeff[WP.PR], cursor.mv));
+
+    // QRS : projection principale (axisCoeff) + résiduelle biphasique.
+    append(line(qrsInterval / 4, -0.05 * coeff[WP.Q] * axisCoeff, cursor.mv));
+    append(line(qrsInterval / 4, (0.9 * coeff[WP.R] * axisCoeff) + (residual * rSign), cursor.mv));
+    append(line(qrsInterval / 4, (-0.3 * coeff[WP.S] * axisCoeff) - (residual * 0.7 * rSign), cursor.mv));
+    append(line(qrsInterval / 4, -0.1 * coeff[WP.J] * axisCoeff, cursor.mv));
+
+    append(line(stSegment, 0 + coeff[WP.ST], cursor.mv));
+    append(peak(tInterval, 0.2 * coeff[WP.T] * axisCoeff, 0, cursor.mv));
+
+    var tpLen = Math.max(0, hrInterval - cursor.t);
+    append(line(tpLen, 0 + coeff[WP.TP], cursor.mv));
+
+    if (beat.length > 0) {
+      beat[beat.length - 1].t = hrInterval;
+    }
+    return beat;
+  }
+
+  /* Interpole linéairement la valeur mv au temps t à partir d'un battement. */
+  function getMvAtTime(beat, t) {
+    if (beat.length === 0) return 0;
+    var hrInterval = beat[beat.length - 1].t;
+    if (hrInterval <= 0) return 0;
+    var tInBeat = t % hrInterval;
+    if (tInBeat < 0) tInBeat += hrInterval;
+    for (var i = 1; i < beat.length; i++) {
+      if (beat[i].t >= tInBeat) {
+        var a = beat[i - 1];
+        var b = beat[i];
+        var frac = (tInBeat - a.t) / Math.max(1e-6, b.t - a.t);
+        return a.mv + (b.mv - a.mv) * frac;
+      }
+    }
+    return beat[beat.length - 1].mv;
+  }
+
+  /* ============================================================================
+   * Afficheurs ECG statiques (6 instances)
+   * -------------------------------------------------------------------------
+   * Contrairement à la version animée (balayage continu), cette version dessine
+   * un nombre fixe de battements (BEATS_TO_SHOW) côte à côte. La trace ne
+   * défile pas — elle est entièrement redessinée à chaque changement d'axe,
+   * ce qui permet de comparer visuellement les morphologies sans le distracteur
+   * du mouvement.
+   * ========================================================================== */
+
+  var BEATS_TO_SHOW = 3;       // nombre de battements affichés par dérivation
+  var SWEEP_MM_PER_S = 25;     // vitesse de défilement standard (pour l'échelle)
+  var GAIN_MM_PER_MV = 10;     // gain standard
+
+  var displays = [];
+
+  function createDisplay(canvas, leadId, leadAngle) {
+    var ctx = canvas.getContext('2d');
+    return {
+      canvas: canvas,
+      ctx: ctx,
+      leadId: leadId,
+      leadAngle: leadAngle,
+      hr: 80,
+      qrsInterval: 0.08,
+      axisCoeff: 1.0,
+      beat: [],
+      dims: {
+        width: 0, height: 0,
+        pixelsPerMm: 4,
+        pixelsPerSecond: 100,
+        pixelsPerMv: 40,
+        centerY: 0
+      }
+    };
+  }
+
+  function setupDisplay(d) {
+    var wrap = d.canvas.parentElement;
+    var rect = wrap.getBoundingClientRect();
+    var cssW = Math.max(1, Math.floor(rect.width));
+    var cssH = Math.max(1, Math.floor(rect.height));
+    var dpr = Math.max(1, window.devicePixelRatio || 1);
+
+    d.ctx.setTransform(1, 0, 0, 1, 0, 0);
+    d.canvas.width = cssW * dpr;
+    d.canvas.height = cssH * dpr;
+    d.canvas.style.width = cssW + 'px';
+    d.canvas.style.height = cssH + 'px';
+    d.ctx.scale(dpr, dpr);
+
+    // pixelsPerMm : on veut que (BEATS_TO_SHOW × hrInterval) secondes
+    // d'ECG remplissent exactement la largeur du canvas
+    var hrInterval = 60 / Math.max(1, d.hr);
+    var totalSeconds = BEATS_TO_SHOW * hrInterval;
+    var pixelsPerMm = cssW / (totalSeconds * SWEEP_MM_PER_S);
+    d.dims = {
+      width: cssW, height: cssH,
+      pixelsPerMm: pixelsPerMm,
+      pixelsPerSecond: pixelsPerMm * SWEEP_MM_PER_S,
+      pixelsPerMv: pixelsPerMm * GAIN_MM_PER_MV,
+      centerY: cssH / 2
+    };
+  }
+
+  function drawGrid(d) {
+    var dim = d.dims;
+    var w = dim.width, h = dim.height, pxmm = dim.pixelsPerMm;
+
+    // Petits carreaux (1 mm) — rose très clair
+    d.ctx.strokeStyle = '#ffc7d4';
+    d.ctx.lineWidth = 0.5;
+    d.ctx.beginPath();
+    for (var x = 0; x <= w + 0.5; x += pxmm) {
+      var xx = Math.round(x) + 0.5;
+      d.ctx.moveTo(xx, 0); d.ctx.lineTo(xx, h);
+    }
+    for (var y = 0; y <= h + 0.5; y += pxmm) {
+      var yy = Math.round(y) + 0.5;
+      d.ctx.moveTo(0, yy); d.ctx.lineTo(w, yy);
+    }
+    d.ctx.stroke();
+
+    // Grands carreaux (5 mm) — rose un peu plus soutenu
+    d.ctx.strokeStyle = '#f78da3';
+    d.ctx.lineWidth = 1;
+    d.ctx.beginPath();
+    var big = pxmm * 5;
+    for (var x = 0; x <= w + 0.5; x += big) {
+      var xx = Math.round(x) + 0.5;
+      d.ctx.moveTo(xx, 0); d.ctx.lineTo(xx, h);
+    }
+    for (var y = 0; y <= h + 0.5; y += big) {
+      var yy = Math.round(y) + 0.5;
+      d.ctx.moveTo(0, yy); d.ctx.lineTo(w, yy);
+    }
+    d.ctx.stroke();
+  }
+
+  /* Dessine la trace ECG statique : BEATS_TO_SHOW battements consécutifs,
+   * échantillonnés pixel par pixel sur toute la largeur du canvas. */
+  function renderDisplay(d) {
+    var dim = d.dims;
+    var w = dim.width, h = dim.height, pxmv = dim.pixelsPerMv, cy = dim.centerY;
+    var pps = dim.pixelsPerSecond;
+
+    // Fond — rose crème doux (comme le papier ECG)
+    d.ctx.fillStyle = '#fff8fa';
+    d.ctx.fillRect(0, 0, w, h);
+    drawGrid(d);
+
+    // Trace — encre profonde
+    d.ctx.strokeStyle = '#0a0a0a';
+    d.ctx.lineWidth = 1.3;
+    d.ctx.lineJoin = 'round';
+    d.ctx.lineCap = 'round';
+    d.ctx.beginPath();
+
+    // Pour chaque pixel x de 0 à w, calculer le temps t correspondant et
+    // interpoler la valeur mv du battement.
+    var totalSeconds = w / pps;
+    for (var x = 0; x < w; x++) {
+      var t = (x / w) * totalSeconds;
+      var mv = getMvAtTime(d.beat, t);
+      var y = cy - mv * pxmv;
+      if (x === 0) d.ctx.moveTo(x, y);
+      else d.ctx.lineTo(x, y);
+    }
+    d.ctx.stroke();
+  }
+
+  /* ============================================================================
+   * État global de l'axe + classification clinique
+   * ========================================================================== */
+
+  var state = {
+    axisAngle: 60,  // axe par défaut : +60° (axe normal moyen)
+    hr: 80
+  };
+
+  function classifyAxis(angle) {
+    while (angle > 180) angle -= 360;
+    while (angle <= -180) angle += 360;
+    if (angle >= -30 && angle <= 90) return 'Axe normal';
+    if (angle >= -90 && angle < -30) return 'Déviation axiale gauche';
+    if (angle > 90 && angle <= 180) return 'Déviation axiale droite';
+    return 'Axe extrême';
+  }
+
+  /* Met à jour l'axe : régénère les formes d'onde et redessine immédiatement
+   * les 6 tracés statiques. Contrairement à la version animée, il n'y a pas
+   * de boucle requestAnimationFrame — le redraw n'a lieu qu'au changement
+   * d'axe (ou au redimensionnement), ce qui économise la batterie sur mobile. */
+  function setAxisAngle(angle) {
+    while (angle > 180) angle -= 360;
+    while (angle <= -180) angle += 360;
+    state.axisAngle = angle;
+
+    var angleStr = (angle >= 0 ? '+' : '') + Math.round(angle) + '°';
+    document.getElementById('axis-angle').textContent = angleStr;
+    document.getElementById('axis-class').textContent = classifyAxis(angle);
+
+    var svg = document.getElementById('hexaxial-svg');
+    svg.setAttribute('aria-valuenow', String(Math.round(angle)));
+
+    updateArrow(angle);
+
+    // Régénère les battements pour les 6 dérivations avec le nouveau coefficient
+    displays.forEach(function (d) {
+      var axisCoeff = Math.cos((angle - d.leadAngle) * Math.PI / 180);
+      d.axisCoeff = axisCoeff;
+      d.beat = generateBeat(d.leadId, axisCoeff, state.hr, 0.08);
+      renderDisplay(d);  // redraw immédiat
+    });
+  }
+
+  /* ============================================================================
+   * Diagramme SVG hexaxial
+   * ========================================================================== */
+
+  var SVG_NS = 'http://www.w3.org/2000/svg';
+  var DIAGRAM_RADIUS = 140;
+
+  // Convertit un angle clinique en coordonnées SVG.
+  // Convention « vue patient » : 0° (DI) → DROITE, +90° (aVF) → BAS.
+  function angleToSVG(angle, radius) {
+    var rad = angle * Math.PI / 180;
+    return {
+      x: radius * Math.cos(rad),
+      y: radius * Math.sin(rad)
+    };
+  }
+
+  function buildDiagram() {
+    var axesGroup = document.getElementById('lead-axes');
+    var labelsGroup = document.getElementById('lead-labels');
+
+    FRONTAL_LEADS.forEach(function (lead) {
+      var inner = angleToSVG(lead.angle, 30);
+      var outer = angleToSVG(lead.angle, DIAGRAM_RADIUS);
+
+      var line = document.createElementNS(SVG_NS, 'line');
+      line.setAttribute('x1', inner.x);
+      line.setAttribute('y1', inner.y);
+      line.setAttribute('x2', outer.x);
+      line.setAttribute('y2', outer.y);
+      line.setAttribute('stroke-dasharray', '3,3');
+      axesGroup.appendChild(line);
+
+      var labelPos = angleToSVG(lead.angle, DIAGRAM_RADIUS + 15);
+      var text = document.createElementNS(SVG_NS, 'text');
+      text.setAttribute('x', labelPos.x);
+      text.setAttribute('y', labelPos.y);
+      text.textContent = lead.label;
+      labelsGroup.appendChild(text);
+    });
+
+    // Arc vert pour la plage d'axe normal (-30° à +90°)
+    var arcStart = angleToSVG(-30, DIAGRAM_RADIUS);
+    var arcEnd = angleToSVG(90, DIAGRAM_RADIUS);
+    var arcPath = 'M ' + arcStart.x + ' ' + arcStart.y +
+                  ' A ' + DIAGRAM_RADIUS + ' ' + DIAGRAM_RADIUS +
+                  ' 0 0 0 ' + arcEnd.x + ' ' + arcEnd.y;
+    document.getElementById('normal-arc').setAttribute('d', arcPath);
+  }
+
+  function updateArrow(angle) {
+    var tip = angleToSVG(angle, 122);
+    var line = document.getElementById('arrow-line');
+    line.setAttribute('x2', tip.x);
+    line.setAttribute('y2', tip.y);
+  }
+
+  // Gestion du glisser (souris + tactile via pointer events)
+  function setupDrag() {
+    var svg = document.getElementById('hexaxial-svg');
+    var dragging = false;
+
+    function getAngleFromEvent(e) {
+      var rect = svg.getBoundingClientRect();
+      var cx = rect.left + rect.width / 2;
+      var cy = rect.top + rect.height / 2;
+      var dx = e.clientX - cx;
+      var dy = e.clientY - cy;
+      return Math.atan2(dy, dx) * 180 / Math.PI;
+    }
+
+    function onPointerDown(e) {
+      dragging = true;
+      svg.focus();
+      e.preventDefault();
+      setAxisAngle(getAngleFromEvent(e));
+    }
+    function onPointerMove(e) {
+      if (!dragging) return;
+      e.preventDefault();
+      setAxisAngle(getAngleFromEvent(e));
+    }
+    function onPointerUp() { dragging = false; }
+
+    svg.addEventListener('pointerdown', onPointerDown);
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('pointercancel', onPointerUp);
+
+    // Clavier : flèches gauche/droite pour ajuster par 5°
+    svg.addEventListener('keydown', function (e) {
+      var delta = 0;
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') delta = -5;
+      else if (e.key === 'ArrowRight' || e.key === 'ArrowUp') delta = 5;
+      else return;
+      e.preventDefault();
+      setAxisAngle(state.axisAngle + delta);
+    });
+  }
+
+  /* ============================================================================
+   * Construction du panneau ECG (6 lignes)
+   * ========================================================================== */
+
+  function buildECGPanel() {
+    var panel = document.getElementById('ecg-panel');
+    panel.innerHTML = '';
+
+    FRONTAL_LEADS.forEach(function (lead) {
+      var row = document.createElement('div');
+      row.className = 'ecg-row';
+
+      var labelDiv = document.createElement('div');
+      labelDiv.className = 'lead-label';
+      var nameSpan = document.createElement('span');
+      nameSpan.className = 'name';
+      nameSpan.textContent = lead.label;
+      var angleSpan = document.createElement('span');
+      angleSpan.className = 'angle';
+      angleSpan.textContent = (lead.angle >= 0 ? '+' : '') + lead.angle + '°';
+      labelDiv.appendChild(nameSpan);
+      labelDiv.appendChild(angleSpan);
+
+      var canvasWrap = document.createElement('div');
+      canvasWrap.className = 'canvas-wrap';
+      var canvas = document.createElement('canvas');
+      canvasWrap.appendChild(canvas);
+
+      var scaleAnno = document.createElement('div');
+      scaleAnno.className = 'scale-anno';
+      scaleAnno.textContent = '25 mm/s · statique';
+      canvasWrap.appendChild(scaleAnno);
+
+      row.appendChild(labelDiv);
+      row.appendChild(canvasWrap);
+      panel.appendChild(row);
+
+      displays.push(createDisplay(canvas, lead.id, lead.angle));
+    });
+  }
+
+  /* ============================================================================
+   * Initialisation
+   * ========================================================================== */
+
+  buildDiagram();
+  buildECGPanel();
+
+  // Initialise les dimensions des canvases et les formes d'onde initiales
+  displays.forEach(function (d) {
+    setupDisplay(d);
+  });
+  setAxisAngle(state.axisAngle);  // calcule les axisCoeff, génère les battements, dessine
+
+  setupDrag();
+
+  // Observe les redimensionnements : recalcule les dimensions et redessine
+  if (window.ResizeObserver) {
+    var ro = new ResizeObserver(function () {
+      displays.forEach(function (d) {
+        setupDisplay(d);
+        renderDisplay(d);
+      });
+    });
+    ro.observe(document.getElementById('ecg-panel'));
+  } else {
+    window.addEventListener('resize', function () {
+      displays.forEach(function (d) {
+        setupDisplay(d);
+        renderDisplay(d);
+      });
+    });
+  }
+
+  // Pas de boucle requestAnimationFrame : les tracés sont statiques et ne
+  // sont redessinés qu'au changement d'axe ou au redimensionnement.
+})();
+</script>
+</body>
+</html>
