@@ -1,45 +1,66 @@
 # 🇲🇦 PMSS - La Plate-forme Marocaine de Simulation en Santé
 
-**"Simulation is a technique, not a technology."**
+**« La simulation est une technique, pas une technologie. »**
 
-Welcome to the official repository for PMSS. We provide free, lightweight, and fully offline healthcare simulation webapps designed to democratize healthcare education. this has started as project for a PhD moduel project named "innovation pedagogique" but we thought it will be better to share those apps with the world.
+Bienvenue sur le dépôt officiel de PMSS. Nous proposons des applications web de simulation en santé gratuites, légères et entièrement hors ligne, conçues pour démocratiser l'enseignement médical. Ce projet a débuté dans le cadre d'un module de doctorat intitulé « innovation pédagogique », mais nous avons pensé qu'il serait utile de partager ces applications avec le monde entier.
 
-## 🌟 Our Philosophy
-High-fidelity simulation shouldn't require high-end budgets or constant internet access. Every app in this repository is:
-- **100% Offline:** Works perfectly without an internet connection.
-- **Lightweight:** Each app is a single HTML file, usally under 2MB.
-- **Universal:** Runs on any device with a modern web browser PC, tablet, smartphone.
-- **Free:** Built for non-profit educational use.
+## 🌟 Notre philosophie
 
-## 📱 Available Simulations
-| App Name | Description | Link |
+La simulation haute fidélité ne devrait pas nécessiter un budget important ni un accès constant à Internet. Chaque application de ce dépôt est :
+
+- **100 % hors ligne :** Fonctionne parfaitement sans connexion Internet.
+- **Légère :** Chaque application est un fichier HTML autonome, généralement sous 200 Ko.
+- **Universelle :** Fonctionne sur tout appareil doté d'un navigateur moderne — PC, tablette, smartphone.
+- **Gratuite :** Sous licence CC BY 4.0, y compris pour un usage commercial (avec attribution).
+
+## 📱 Simulations disponibles
+
+| Nom de l'application | Description | Lien |
 | :--- | :--- | :--- |
-| **Normal ECG Simulator** | Simulate and understand normal ECG waveforms. | [Open App](normal-ecg-simulateur.html) |
-| **Cardiac Axis (Axe Cardiaque)** | Interactive tool to determine the electrical axis of the heart. | [Open App](axe-cardiaque.html) |
-| **Electrode Mapping (Carto Électrode)** | Visualize ECG lead placements and electrode mapping. | [Open App](carto-electrode.html) |
-| **Wave Labeler (Étiqueteur d'ondes)** | Practice identifying P, QRS, and T waves on ECG strips. | [Open App](etiqueteur-ondes.html) |
-| **Find the Error (Trouver l'erreur)** | Diagnostic training to spot abnormalities in ECG traces. | [Open App](trouver-erreur.html) |
+| **Simulateur ECG normal** | Simulez et comprenez les tracés ECG normaux. | [Ouvrir l'application](normal-ecg-simulateur.html) |
+| **Axe cardiaque (version animée)** | Outil interactif pour déterminer l'axe électrique du cœur. Tracés ECG animés (balayage continu). | [Ouvrir l'application](axe-cardiaque.html) |
+| **Axe cardiaque (version statique)** | Même outil, mais avec des tracés ECG statiques qui se redessinent instantanément lors du changement d'axe. Idéal pour comparer les morphologies sans la distraction du mouvement. | [Ouvrir l'application](axe-cardiaque-statique.html) |
+| **Cartographie des électrodes** | Visualisez le placement des dérivations ECG et la cartographie des électrodes. | [Ouvrir l'application](carto-electrode.html) |
+| **Étiqueteur d'ondes** | Entraînez-vous à identifier les ondes P, QRS et T sur les tracés ECG. | [Ouvrir l'application](etiqueteur-ondes.html) |
+| **Trouver l'erreur** | Entraînement diagnostique pour repérer les anomalies dans les tracés ECG. | [Ouvrir l'application](trouver-erreur.html) |
 
-*More simulations (Ventilators, Monitors, Infusion Pumps) are coming soon!*
+*D'autres simulations (respirateurs artificiels, moniteurs, pousse-seringues) arriveront bientôt !*
 
-## 💻 How to Use Offline
-1. Go to the file you want (e.g., `normal-ecg-simulateur.html`).
-2. Click the **"Raw"** button or right-click and select **"Save link as..."** to download the `.html` file to your computer.
-3. Double-click the downloaded file. It will open in your default web browser and work perfectly offline.
+### Différence entre les deux versions de l'axe cardiaque
 
-## Request simulation
-Have a request for a specific medical machine or clinical scenario? Please open a GitHub Issue and let us know! 
+- **Version animée** (`axe-cardiaque.html`) : les tracés ECG défilent de droite à gauche en continu, comme sur un moniteur de chevet. La trace se met à jour progressivement à mesure que les nouveaux échantillons remplacent les anciens.
+- **Version statique** (`axe-cardiaque-statique.html`) : trois battements fixes sont affichés par dérivation. Les tracés ne défilent pas — ils sont entièrement redessinés à chaque changement d'axe. Cette version économise la batterie sur mobile et facilite la comparaison visuelle des morphologies.
 
-## 📝 Citation & Academic Use
-These tools are free for educational and non-commercial use. **If you use PMSS applications in your research, teaching, or scientific publications, you must reference this work.** 
+## 💻 Utilisation hors ligne
 
-Please cite us as follows:
-> Razzok, O. (2026). *PMSS - La Plate-forme Marocaine de Simulation en Santé* [Healthcare simulation webapps]. Retrieved from https://github.com/oualid-razzok/PMSS-Simulations
+1. Ouvrez le fichier que vous souhaitez utiliser (par exemple, `normal-ecg-simulateur.html`).
+2. Cliquez sur le bouton **« Raw »** ou faites un clic droit et sélectionnez **« Enregistrer la cible sous... »** pour télécharger le fichier `.html` sur votre ordinateur.
+3. Double-cliquez sur le fichier téléchargé. Il s'ouvrira dans votre navigateur web par défaut et fonctionnera parfaitement hors ligne.
 
+## Demander une simulation
 
-*You can also use the "Cite this repository" button on the right sidebar of this GitHub page to generate a BibTeX or APA citation.*
+Vous avez une demande pour une machine médicale spécifique ou un scénario clinique ? Ouvrez une *issue* GitHub et faites-le nous savoir !
 
-## 📜 License
-[![License: CC BY 4.0](https://shields.io)](https://creativecommons.org)
-This project is licensed under the terms of the **CC BY 4.0** license.
+## 📝 Citation et usage académique
 
+Ces outils sont sous licence CC BY 4.0, qui autorise l'usage non commercial et commercial, l'adaptation et la redistribution — à condition de fournir une attribution appropriée.
+
+**Si vous utilisez les applications PMSS dans vos recherches, votre enseignement ou vos publications scientifiques, vous devez référencer ce travail.**
+
+Veuillez nous citer comme suit :
+
+> Razzok, O. (2026). *PMSS - La Plate-forme Marocaine de Simulation en Santé* [Applications web de simulation en santé]. Récupéré de https://github.com/oualid-razzok/PMSS-Simulations
+
+*Vous pouvez également utiliser le bouton « Cite this repository » dans la barre latérale droite de la page GitHub pour générer une citation BibTeX ou APA.*
+
+## 📜 Licence
+
+[![License: CC BY 4.0](https://img.shields.io/badge/License-CC_BY_4.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
+
+Ce projet est sous licence **Creative Commons Attribution 4.0 International (CC BY 4.0)**.
+
+- ✅ Vous pouvez **partager** et **adapter** le matériel pour **tout usage, y compris commercial**.
+- ✅ Vous pouvez distribuer les œuvres dérivées sous n'importe quelle licence.
+- ⚠️ Vous **devez** accorder un crédit approprié, fournir un lien vers la licence et indiquer si des modifications ont été effectuées.
+
+Consultez le fichier [LICENCE](LICENCE) pour le texte complet de la licence, ou lisez le [résumé en langue courante](https://creativecommons.org/licenses/by/4.0/).
