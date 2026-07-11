@@ -382,7 +382,18 @@
    * axisCoeff = cos(angle_axe - angle_dérivation) — projection du vecteur
    * cardiaque sur l'axe de la dérivation. Quand axisCoeff est négatif, tout
    * le complexe s'inverse (R devient S, etc.). Quand axisCoeff ≈ 0, le complexe
-   * est quasi isoélectrique (axe perpendiculaire à la dérivation). */
+   * devient biphasique isovoltique : en clinique, une dérivation perpendiculaire
+   * à l'axe cardiaque ne montre JAMAIS un tracé parfaitement plat — le front de
+   * dépolarisation traverse la dérivation, ce qui produit un petit QRS biphasique
+   * (petit R suivi d'un petit S d'amplitude à peu près égale, aire nette ≈ 0).
+   *
+   * On modélise donc une activité résiduelle qui :
+   *   - est maximale quand |axisCoeff| → 0 (perpendiculaire)
+   *   - s'annule quand |axisCoeff| → 1 (parallèle, la projection domine)
+   *   - est appliquée aux ondes R (positive) et S (négative) pour créer le
+   *     pattern biphasique attendu ; les ondes P et T (monophasiques) restent
+   *     multipliées par axisCoeff car elles s'annulent naturellement quand
+   *     la dérivation est perpendiculaire (ce qui est cliniquement correct). */
   function generateBeat(lead, axisCoeff, hr, qrsInterval) {
     hr = hr || 80;
     qrsInterval = qrsInterval || 0.08;
@@ -412,14 +423,32 @@
       }
     }
 
-    // Les ondes P, Q, R, S, J, T sont toutes multipliées par axisCoeff
-    // (projection du vecteur cardiaque sur l'axe de la dérivation)
+    // Activité résiduelle : (1 - |axisCoeff|)² produit une courbe en cloche
+    // qui vaut 1 quand axisCoeff = 0 et ~0 dès que |axisCoeff| > 0.4.
+    // Borné à RESIDUAL_AMP mV (≈ 0,08 mV) — assez pour être visible, pas
+    // assez pour dominer quand la projection principale est non nulle.
+    var RESIDUAL_AMP = 0.08;
+    var residual = Math.pow(1 - Math.abs(axisCoeff), 2) * RESIDUAL_AMP;
+    // Le signe de la résiduelle suit le signe naturel du R de la dérivation :
+    // si coeff[R] > 0, la résiduelle crée un petit R positif puis un petit S
+    // négatif ; si coeff[R] < 0 (déjà inversée, ex. aVR), c'est l'inverse.
+    var rSign = coeff[WP.R] >= 0 ? 1 : -1;
+
+    // Ondes P et T : multipliées par axisCoeff uniquement (monophasiques,
+    // s'annulent naturellement quand la dérivation est perpendiculaire).
     append(peak((pr * 2) / 3, 0.1 * coeff[WP.P] * axisCoeff, 0, cursor.mv));
     append(line(pr / 3, 0 + coeff[WP.PR], cursor.mv));
+
+    // QRS : projection principale (axisCoeff) + résiduelle biphasique.
+    // Q : pas de résiduelle (le Q est déjà petit et négatif).
     append(line(qrsInterval / 4, -0.05 * coeff[WP.Q] * axisCoeff, cursor.mv));
-    append(line(qrsInterval / 4, 0.9 * coeff[WP.R] * axisCoeff, cursor.mv));
-    append(line(qrsInterval / 4, -0.3 * coeff[WP.S] * axisCoeff, cursor.mv));
+    // R : projection + résiduelle positive.
+    append(line(qrsInterval / 4, (0.9 * coeff[WP.R] * axisCoeff) + (residual * rSign), cursor.mv));
+    // S : projection - résiduelle négative (équilibre approximativement le R).
+    append(line(qrsInterval / 4, (-0.3 * coeff[WP.S] * axisCoeff) - (residual * 0.7 * rSign), cursor.mv));
+    // J : pas de résiduelle.
     append(line(qrsInterval / 4, -0.1 * coeff[WP.J] * axisCoeff, cursor.mv));
+
     append(line(stSegment, 0 + coeff[WP.ST], cursor.mv));
     append(peak(tInterval, 0.2 * coeff[WP.T] * axisCoeff, 0, cursor.mv));
 
