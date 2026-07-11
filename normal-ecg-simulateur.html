@@ -664,15 +664,19 @@
     });
   }
 
-  // Change la dérivation active et met à jour l'interface + la forme d'onde
+  // Change la dérivation active et met à jour l'interface + la forme d'onde.
+  //
+  // IMPORTANT : on NE réinitialise PAS le tampon d'échantillons ni la position
+  // de lecture. La nouvelle forme d'onde remplace progressivement l'ancienne à
+  // mesure que le balayage continue — la trace existante défile vers la gauche
+  // et la nouvelle morphologie apparaît depuis le bord droit, sans coupure
+  // visuelle. Avant ce fixe, le tampon était effacé (state.samples.fill(0)) et
+  // le playhead remis à 0, ce qui faisait disparaître tout le tracé et
+  // revenait visuellement à un « redémarrage ».
   function selectLead(lead) {
     state.lead = lead;
     state.beat = generateBeat(lead, state.hr, state.qrsInterval);
-    // Efface le tampon pour éviter que la trace précédente persiste
-    if (state.samples) state.samples.fill(0);
-    state.playhead = 0;
-    state.currentTime = 0;
-    state.lastFrameTime = 0;
+    // Pas de réinitialisation du tampon ni du playhead — transition fluide.
 
     // Met à jour les boutons
     var buttons = document.querySelectorAll('.lead-btn');
@@ -687,14 +691,12 @@
     document.getElementById('lead-desc').textContent = LEAD_DESC[lead];
   }
 
-  // Change la FC et régénère le battement
+  // Change la FC et régénère le battement.
+  // Même logique que selectLead : on garde la continuité du balayage.
   function selectHr(hr) {
     state.hr = hr;
     state.beat = generateBeat(state.lead, hr, state.qrsInterval);
-    if (state.samples) state.samples.fill(0);
-    state.playhead = 0;
-    state.currentTime = 0;
-    state.lastFrameTime = 0;
+    // Pas de réinitialisation du tampon ni du playhead — transition fluide.
 
     document.getElementById('hr-value').textContent = hr;
     document.getElementById('hr-slider-value').textContent = hr;
