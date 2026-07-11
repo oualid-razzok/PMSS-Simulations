@@ -1,0 +1,1621 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ECG-anomalies — Quiz diagnostique</title>
+<style>
+  /* ===== Reset & base ===== */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: #f5f5f5;
+    color: #1a1a1a;
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    padding: 16px;
+    display: flex;
+    justify-content: center;
+    align-items: stretch;
+    overflow: hidden;
+  }
+
+  /* ===== Conteneur principal ===== */
+  .app {
+    width: 100%;
+    max-width: 1400px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: #ffffff;
+    border: 1px solid #e5e5e5;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.03);
+    overflow: hidden;
+  }
+
+  /* ===== En-tête ===== */
+  .app-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid #e5e5e5;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .app-title { display: flex; align-items: baseline; gap: 8px; }
+  .app-title h1 {
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: #1a1a1a;
+  }
+  .app-title .subtitle {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #737373;
+  }
+  .header-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .progress-badge {
+    font-size: 11px;
+    font-weight: 600;
+    color: #404040;
+    background: #f5f5f5;
+    border: 1px solid #e5e5e5;
+    border-radius: 999px;
+    padding: 3px 10px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ===== Bouton Pause ===== */
+  .pause-btn {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    background: #f5f5f5;
+    border: 1px solid #d4d4d4;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+    padding: 0;
+    line-height: 1;
+    flex: 0 0 auto;
+  }
+  .pause-btn:hover { background: #e5e5e5; border-color: #1a1a1a; }
+  .pause-btn:focus-visible { outline: 2px solid #1a1a1a; outline-offset: 1px; }
+  .pause-btn.paused { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+
+  /* ===== Grille principale : ECG | Quiz ===== */
+  .main-grid {
+    flex: 1 1 0;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(400px, 1.4fr) minmax(280px, 1fr);
+  }
+  @media (max-width: 900px) {
+    .main-grid {
+      grid-template-columns: 1fr;
+      grid-template-rows: minmax(300px, 1fr) auto;
+    }
+  }
+
+  /* ===== Panneau ECG (gauche) ===== */
+  .ecg-panel {
+    display: flex;
+    flex-direction: column;
+    background: #fafafa;
+    min-height: 0;
+    overflow: hidden;
+    border-right: 1px solid #e5e5e5;
+  }
+  @media (max-width: 900px) {
+    .ecg-panel { border-right: none; border-bottom: 1px solid #e5e5e5; }
+  }
+  .ecg-row {
+    flex: 1 1 0;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 44px 1fr;
+    border-bottom: 1px solid #e5e5e5;
+  }
+  .ecg-row:last-child { border-bottom: none; }
+  .ecg-row .lead-label {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: #f5f5f5;
+    border-right: 1px solid #e5e5e5;
+    font-family: ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
+    gap: 1px;
+  }
+  .ecg-row .lead-label .name {
+    font-size: 13px;
+    font-weight: 700;
+    color: #1a1a1a;
+  }
+  .ecg-row .canvas-wrap {
+    position: relative;
+    overflow: hidden;
+    background: #fff8fa;
+    min-height: 0;
+  }
+  .ecg-row canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+  .ecg-row .scale-anno {
+    position: absolute;
+    bottom: 2px;
+    right: 6px;
+    font-size: 8px;
+    color: #b0b0b0;
+    font-family: ui-monospace, monospace;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  /* ===== Panneau Quiz (droite) ===== */
+  .quiz-panel {
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    gap: 12px;
+    overflow-y: auto;
+    min-height: 0;
+  }
+  .quiz-question {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1a1a1a;
+    line-height: 1.4;
+  }
+  .quiz-hint {
+    font-size: 11px;
+    color: #737373;
+    line-height: 1.4;
+  }
+  .choices-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .choice-btn {
+    text-align: left;
+    padding: 10px 12px;
+    background: #ffffff;
+    border: 1.5px solid #e5e5e5;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-family: inherit;
+    color: #1a1a1a;
+    line-height: 1.4;
+    transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.1s ease;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .choice-btn:hover:not(:disabled) {
+    border-color: #1a1a1a;
+    background: #fafafa;
+  }
+  .choice-btn:focus-visible {
+    outline: 2px solid #1a1a1a;
+    outline-offset: 1px;
+  }
+  .choice-btn:active:not(:disabled) { transform: scale(0.99); }
+  .choice-btn:disabled { cursor: default; opacity: 0.85; }
+  .choice-btn .choice-letter {
+    flex: 0 0 auto;
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f5f5f5;
+    border: 1px solid #d4d4d4;
+    border-radius: 50%;
+    font-size: 11px;
+    font-weight: 700;
+    font-family: ui-monospace, monospace;
+    color: #404040;
+  }
+  .choice-btn.correct {
+    border-color: #16a34a;
+    background: #f0fdf4;
+  }
+  .choice-btn.correct .choice-letter {
+    background: #16a34a;
+    color: #fff;
+    border-color: #16a34a;
+  }
+  .choice-btn.wrong {
+    border-color: #dc2626;
+    background: #fef2f2;
+  }
+  .choice-btn.wrong .choice-letter {
+    background: #dc2626;
+    color: #fff;
+    border-color: #dc2626;
+  }
+  .choice-btn.reveal {
+    border-color: #16a34a;
+    background: #f0fdf4;
+  }
+  .choice-btn.reveal .choice-letter {
+    background: #16a34a;
+    color: #fff;
+    border-color: #16a34a;
+  }
+
+  /* ===== Feedback ===== */
+  .feedback {
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    line-height: 1.5;
+    display: none;
+  }
+  .feedback.success {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    color: #14532d;
+    display: block;
+  }
+  .feedback.error {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #7f1d1d;
+    display: block;
+  }
+  .feedback strong { font-weight: 700; }
+  .feedback .detail {
+    margin-top: 4px;
+    font-size: 11px;
+    color: #404040;
+  }
+
+  /* ===== Bouton Suivant ===== */
+  .next-btn {
+    padding: 10px 16px;
+    background: #1a1a1a;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    transition: background-color 0.15s ease;
+    display: none;
+  }
+  .next-btn:hover { background: #333; }
+  .next-btn:focus-visible { outline: 2px solid #1a1a1a; outline-offset: 2px; }
+  .next-btn.visible { display: block; }
+
+  /* ===== Écran de completion ===== */
+  .completion-screen {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 24px;
+    text-align: center;
+  }
+  .completion-screen.visible { display: flex; }
+  .completion-screen h2 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1a1a1a;
+  }
+  .completion-screen p {
+    font-size: 13px;
+    color: #404040;
+    line-height: 1.5;
+    max-width: 280px;
+  }
+  .completion-screen .stats {
+    font-size: 24px;
+    font-weight: 700;
+    color: #16a34a;
+    font-variant-numeric: tabular-nums;
+  }
+  .restart-btn {
+    padding: 10px 20px;
+    background: #1a1a1a;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+  }
+  .restart-btn:hover { background: #333; }
+
+  /* ===== Custom scrollbar ===== */
+  .quiz-panel::-webkit-scrollbar { width: 6px; }
+  .quiz-panel::-webkit-scrollbar-track { background: transparent; }
+  .quiz-panel::-webkit-scrollbar-thumb { background: #d4d4d4; border-radius: 3px; }
+  .quiz-panel::-webkit-scrollbar-thumb:hover { background: #a3a3a3; }
+</style>
+</head>
+<body>
+  <main class="app">
+    <header class="app-header">
+      <div class="app-title">
+        <h1>ECG-anomalies</h1>
+        <span class="subtitle">Quiz diagnostique · 12 dérivations</span>
+      </div>
+      <div class="header-controls">
+        <span class="progress-badge" id="progress-badge">0 / 18 vues</span>
+        <button
+          type="button"
+          id="pause-btn"
+          class="pause-btn"
+          aria-pressed="false"
+          aria-label="Mettre en pause le balayage"
+          title="Pause/Reprise (Espace)"
+        >⏸</button>
+      </div>
+    </header>
+
+    <div class="main-grid">
+      <section class="ecg-panel" id="ecg-panel" aria-label="ECG 12 dérivations"></section>
+      <section class="quiz-panel" id="quiz-panel" aria-label="Quiz diagnostique">
+        <div class="quiz-question" id="quiz-question">Identifiez l'anomalie cardiaque présentée dans cet ECG.</div>
+        <div class="quiz-hint" id="quiz-hint">Sélectionnez une réponse. Vous pouvez essayer autant de fois que voulu.</div>
+        <div class="choices-grid" id="choices-grid"></div>
+        <div class="feedback" id="feedback"></div>
+        <button type="button" id="next-btn" class="next-btn">Cas suivant →</button>
+        <div class="completion-screen" id="completion-screen">
+          <h2>🎉 Bravo !</h2>
+          <p>Vous avez vu les 18 anomalies. Vous pouvez recommencer pour vous entraîner davantage.</p>
+          <div class="stats" id="completion-stats">— / 17</div>
+          <button type="button" id="restart-btn" class="restart-btn">Recommencer</button>
+        </div>
+      </section>
+    </div>
+  </main>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ============================================================================
+   * Définitions des dérivations et coefficients de base
+   * ========================================================================== */
+  var LEADS = ['I', 'II', 'III', 'aVR', 'aVL', 'aVF', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6'];
+  var LEAD_LABEL = {
+    I: 'DI', II: 'DII', III: 'DIII',
+    aVR: 'aVR', aVL: 'aVL', aVF: 'aVF',
+    V1: 'V1', V2: 'V2', V3: 'V3', V4: 'V4', V5: 'V5', V6: 'V6'
+  };
+  var WP = { QRST:0, P:1, Q:2, R:3, S:4, J:5, T:6, PR:7, ST:8, TP:9 };
+
+  var baseLeadCoeff = [
+    [0.7,0.7,0.7,0.7,0.7,0.7,0.8,0,0,0],   // I
+    [1.0,1.0,1.0,1.0,1.0,1.0,1.0,0,0,0],   // II
+    [0.5,0.5,0.5,0.5,0.5,0.5,0.2,0,0,0],   // III
+    [-0.9,-1.0,-1.0,-0.8,-1.0,-1.0,-0.9,0,0,0], // aVR
+    [0.2,-1.0,0.3,0.2,0.4,0.3,0.6,0,0,0],  // aVL
+    [0.8,0.7,0.8,0.8,0.8,0.8,0.4,0,0,0],   // aVF
+    [-1.0,0.2,-0.7,-1.0,0.0,0.0,0.3,0,0,0],// V1
+    [-1.2,0.2,-1.8,-1.2,0.0,-1.0,1.4,0,0.1,0], // V2
+    [-1.4,0.2,-3.0,-1.4,0.0,0.0,1.8,0,0.1,0],  // V3
+    [-0.8,0.7,-9.0,-0.8,0.0,0.0,1.4,0,0.1,0],  // V4
+    [-0.2,0.7,-10.0,-0.2,0.0,0.0,1.0,0,0.1,0], // V5
+    [-0.1,1.0,-9.0,-0.1,0.0,0.0,0.8,0,0,0]     // V6
+  ];
+
+  /* ============================================================================
+   * Fonctions de tracé (portées de Infirmary Integrated)
+   * ========================================================================== */
+  function bezier(p0, p1, p2, pct) {
+    var inv = 1 - pct;
+    return {
+      t:  p0.t  * inv * inv + 2 * p1.t  * pct * inv + p2.t  * pct * pct,
+      mv: p0.mv * inv * inv + 2 * p1.mv * pct * inv + p2.mv * pct * pct
+    };
+  }
+
+  function peak(length, mv, mvEnd, startMv) {
+    if (length <= 0) return [];
+    var out = [];
+    var RES_MS = 10;
+    var res = (2 * (RES_MS / 1000)) / length;
+    for (var i = 1; i * res <= 1; i++) {
+      out.push(bezier({t:0,mv:startMv}, {t:length/3,mv:mv}, {t:length/2,mv:mv}, i*res));
+    }
+    for (var i = 1; i * res <= 1; i++) {
+      out.push(bezier({t:length/2,mv:mv}, {t:(length*3)/5,mv:mv}, {t:length,mv:mvEnd}, i*res));
+    }
+    out.push({t:length, mv:mvEnd});
+    return out;
+  }
+
+  function line(length, mv, startMv) {
+    if (length <= 0) return [];
+    var out = [];
+    var RES_MS = 10;
+    var step = RES_MS / 1000;
+    for (var t = step; t <= length; t += step) {
+      out.push({t: t, mv: startMv + (mv - startMv) * (t / length)});
+    }
+    out.push({t: length, mv: mv});
+    return out;
+  }
+
+  /* ============================================================================
+   * Génération du battement NORMAL (un intervalle RR)
+   * ========================================================================== */
+  function generateNormalBeat(lead, hr, qrsInterval) {
+    hr = hr || 80;
+    qrsInterval = qrsInterval || 0.08;
+    var hrInterval = 60 / Math.max(1, hr);
+    var prFrac = Math.min(1, Math.max(0, (hr - 60) / (160 - 60)));
+    var pr = 0.16 + (0.20 - 0.16) * prFrac;
+    var qt = Math.min(1, Math.max(0.1, 3.3 * qrsInterval));
+    var stInterval = Math.max(0, qt - qrsInterval);
+    var stSegment = stInterval * (1/3);
+    var tInterval = stInterval * (2/3);
+
+    var coeff = baseLeadCoeff[LEADS.indexOf(lead)];
+    var beat = [];
+    var cursor = {t:0, mv:0};
+
+    function append(pts) {
+      for (var i = 0; i < pts.length; i++) beat.push({t: cursor.t + pts[i].t, mv: pts[i].mv});
+      if (pts.length > 0) cursor = {t: cursor.t + pts[pts.length-1].t, mv: pts[pts.length-1].mv};
+    }
+
+    append(peak((pr*2)/3, 0.1 * coeff[WP.P], 0, cursor.mv));
+    append(line(pr/3, 0 + coeff[WP.PR], cursor.mv));
+    append(line(qrsInterval/4, -0.05 * coeff[WP.Q], cursor.mv));
+    append(line(qrsInterval/4, 0.9 * coeff[WP.R], cursor.mv));
+    append(line(qrsInterval/4, -0.3 * coeff[WP.S], cursor.mv));
+    append(line(qrsInterval/4, -0.1 * coeff[WP.J], cursor.mv));
+    append(line(stSegment, 0 + coeff[WP.ST], cursor.mv));
+    append(peak(tInterval, 0.2 * coeff[WP.T], 0, cursor.mv));
+    var tpLen = Math.max(0, hrInterval - cursor.t);
+    append(line(tpLen, 0 + coeff[WP.TP], cursor.mv));
+    if (beat.length > 0) beat[beat.length-1].t = hrInterval;
+    return beat;
+  }
+
+  /* Interpole la valeur mv au temps t */
+  function getMvAtTime(beat, t) {
+    if (beat.length === 0) return 0;
+    var hrInterval = beat[beat.length-1].t;
+    if (hrInterval <= 0) return 0;
+    var tInBeat = t % hrInterval;
+    if (tInBeat < 0) tInBeat += hrInterval;
+    for (var i = 1; i < beat.length; i++) {
+      if (beat[i].t >= tInBeat) {
+        var a = beat[i-1], b = beat[i];
+        var frac = (tInBeat - a.t) / Math.max(1e-6, b.t - a.t);
+        return a.mv + (b.mv - a.mv) * frac;
+      }
+    }
+    return beat[beat.length-1].mv;
+  }
+
+  /* ============================================================================
+   * MODIFICATEURS D'ANOMALIES
+   * -------------------------------------------------------------------------
+   * Chaque anomalie est une fonction qui prend un beat normal (tableau de
+   * {t, mv}) + l'ID de la dérivation + des paramètres, et retourne un beat
+   * modifié. Les modificateurs peuvent : ajouter une élévation/dépression ST,
+   * modifier la forme des ondes P/T, élargir le QRS, créer des rythmes
+   * anarchiques, etc.
+   * ========================================================================== */
+
+  // Trouve l'indice du point du beat le plus proche du temps t
+  function findBeatIndex(beat, t) {
+    for (var i = 0; i < beat.length; i++) {
+      if (beat[i].t >= t) return i;
+    }
+    return beat.length - 1;
+  }
+
+  // Ajoute un décalage ST sur une plage de temps donnée
+  function addStShift(beat, startT, endT, shiftMv) {
+    for (var i = 0; i < beat.length; i++) {
+      if (beat[i].t >= startT && beat[i].t <= endT) {
+        beat[i].mv += shiftMv;
+      }
+    }
+  }
+
+  // Modifie l'amplitude de l'onde T (cherche le pic T et l'amplifie)
+  function scaleTWave(beat, tStart, tEnd, factor) {
+    for (var i = 0; i < beat.length; i++) {
+      if (beat[i].t >= tStart && beat[i].t <= tEnd) {
+        beat[i].mv *= factor;
+      }
+    }
+  }
+
+  // Inverse l'onde T (négative au lieu de positive)
+  function invertTWave(beat, tStart, tEnd) {
+    for (var i = 0; i < beat.length; i++) {
+      if (beat[i].t >= tStart && beat[i].t <= tEnd) {
+        beat[i].mv = -Math.abs(beat[i].mv) * (beat[i].mv > 0 ? 1 : 1);
+        // Inverser : si le T était positif, le rendre négatif
+        if (beat[i].mv > 0) beat[i].mv = -beat[i].mv;
+      }
+    }
+  }
+
+  // Rend l'onde T biphasique (positive puis négative)
+  function makeBiphasicT(beat, tStart, tEnd) {
+    var midT = (tStart + tEnd) / 2;
+    for (var i = 0; i < beat.length; i++) {
+      if (beat[i].t >= tStart && beat[i].t <= tEnd) {
+        if (beat[i].t > midT && beat[i].mv > 0) {
+          beat[i].mv = -beat[i].mv;
+        }
+      }
+    }
+  }
+
+  /* ============================================================================
+   * Catalogue des 18 anomalies (17 entités cliniques + STEMI subdivisé en inférieur/antérieur)
+   * -------------------------------------------------------------------------
+   * Chaque entrée contient :
+   *   id          : identifiant unique
+   *   name        : nom français de l'anomalie
+   *   shortName   : nom court pour les boutons
+   *   description : explication clinique (affichée après réponse)
+   *   hr          : fréquence cardiaque par défaut pour cette anomalie
+   *   leads       : objet { leadId: modifierFn(beat, leadId) } — dérivations
+   *                 affectées et leur modificateur. Les dérivations non listées
+   *                 conservent un battement normal.
+   * ========================================================================== */
+
+  var ANOMALIES = [
+    {
+      id: 'stemi_inferior',
+      name: 'STEMI inférieur',
+      shortName: 'STEMI inférieur',
+      description: 'Sus-décalage ST ≥ 1 mm dans les dérivations inférieures (DII, DIII, aVF). Occlusion aiguë d\'une artère coronaire droite ou circonflexe.',
+      hr: 80,
+      leads: {
+        II:  function(b) { addStShift(b, 0.28, 0.45, 0.25); return b; },
+        III: function(b) { addStShift(b, 0.28, 0.45, 0.30); return b; },
+        aVF: function(b) { addStShift(b, 0.28, 0.45, 0.25); return b; },
+        I:  function(b) { addStShift(b, 0.28, 0.45, -0.08); return b; },
+        aVL:function(b) { addStShift(b, 0.28, 0.45, -0.10); return b; }
+      }
+    },
+    {
+      id: 'stemi_anterior',
+      name: 'STEMI antérieur',
+      shortName: 'STEMI antérieur',
+      description: 'Sus-décalage ST dans les dérivations précordiales V1-V4. Occlusion aiguë de l\'IVA (interventriculaire antérieure). Urgence absolue.',
+      hr: 85,
+      leads: {
+        V1: function(b) { addStShift(b, 0.28, 0.45, 0.20); return b; },
+        V2: function(b) { addStShift(b, 0.28, 0.45, 0.35); return b; },
+        V3: function(b) { addStShift(b, 0.28, 0.45, 0.35); return b; },
+        V4: function(b) { addStShift(b, 0.28, 0.45, 0.25); return b; }
+      }
+    },
+    {
+      id: 'hyperacute_t',
+      name: 'Ondes T hyperaiguës',
+      shortName: 'Ondes T hyperaiguës',
+      description: 'Ondes T amples, larges et symétriques. Phase précoce de l\'infarctus, précédant souvent le sus-décalage ST. Signe d\'ischémie aiguë.',
+      hr: 80,
+      leads: {
+        V2: function(b) { scaleTWave(b, 0.30, 0.50, 3.5); return b; },
+        V3: function(b) { scaleTWave(b, 0.30, 0.50, 3.5); return b; },
+        V4: function(b) { scaleTWave(b, 0.30, 0.50, 3.0); return b; }
+      }
+    },
+    {
+      id: 'wellens',
+      name: 'Syndrome de Wellens',
+      shortName: 'Wellens',
+      description: 'Ondes T profondément inversées (Type B) en V2-V3, parfois V1-V4. Signe critique de sténose critique de l\'IVA. Risque d\'infarctus imminent.',
+      hr: 75,
+      leads: {
+        V2: function(b) { invertTWave(b, 0.30, 0.50); scaleTWave(b, 0.30, 0.50, 2.0); return b; },
+        V3: function(b) { invertTWave(b, 0.30, 0.50); scaleTWave(b, 0.30, 0.50, 2.0); return b; },
+        V4: function(b) { invertTWave(b, 0.30, 0.50); scaleTWave(b, 0.30, 0.50, 1.5); return b; }
+      }
+    },
+    {
+      id: 'dewinter',
+      name: 'Ondes T de De Winter',
+      shortName: 'De Winter',
+      description: 'Sous-décalage ST ascendant au point J suivi d\'ondes T amples et symétriques en V1-V4. Équivalent de STEMI suggérant une occlusion de l\'IVA.',
+      hr: 80,
+      leads: {
+        V1: function(b) { addStShift(b, 0.26, 0.32, -0.15); scaleTWave(b, 0.32, 0.52, 2.5); return b; },
+        V2: function(b) { addStShift(b, 0.26, 0.32, -0.20); scaleTWave(b, 0.32, 0.52, 3.0); return b; },
+        V3: function(b) { addStShift(b, 0.26, 0.32, -0.20); scaleTWave(b, 0.32, 0.52, 3.0); return b; },
+        V4: function(b) { addStShift(b, 0.26, 0.32, -0.15); scaleTWave(b, 0.32, 0.52, 2.5); return b; }
+      }
+    },
+    {
+      id: 'left_main',
+      name: 'Occlusion tronc commun',
+      shortName: 'Tronc commun',
+      description: 'Sous-décalage ST diffus dans ≥ 8 dérivations avec sus-décalage ST en aVR ≥ 1 mm. Signe d\'occlusion du tronc commun gauche. Pronostic réservé.',
+      hr: 90,
+      leads: {
+        I:   function(b) { addStShift(b, 0.28, 0.45, -0.12); return b; },
+        II:  function(b) { addStShift(b, 0.28, 0.45, -0.15); return b; },
+        III: function(b) { addStShift(b, 0.28, 0.45, -0.15); return b; },
+        aVF: function(b) { addStShift(b, 0.28, 0.45, -0.15); return b; },
+        aVL: function(b) { addStShift(b, 0.28, 0.45, -0.10); return b; },
+        V3:  function(b) { addStShift(b, 0.28, 0.45, -0.12); return b; },
+        V4:  function(b) { addStShift(b, 0.28, 0.45, -0.15); return b; },
+        V5:  function(b) { addStShift(b, 0.28, 0.45, -0.15); return b; },
+        V6:  function(b) { addStShift(b, 0.28, 0.45, -0.12); return b; },
+        aVR: function(b) { addStShift(b, 0.28, 0.45, 0.18); return b; }
+      }
+    },
+    {
+      id: 'posterior_mi',
+      name: 'Infarctus postérieur',
+      shortName: 'Infarctus postérieur',
+      description: 'Sous-décalage ST horizontal en V1-V3 avec ondes R amples. Image miroir d\'un infarctus postérieur. Confirmer avec dérivations V7-V9.',
+      hr: 80,
+      leads: {
+        V1: function(b) { addStShift(b, 0.28, 0.45, -0.20); return b; },
+        V2: function(b) { addStShift(b, 0.28, 0.45, -0.25); return b; },
+        V3: function(b) { addStShift(b, 0.28, 0.45, -0.20); return b; }
+      }
+    },
+    {
+      id: 'vfib',
+      name: 'Fibrillation ventriculaire',
+      shortName: 'Fibrillation ventriculaire',
+      description: 'Tracé chaotique, irrégulier, désorganisé. Absence complète d\'ondes P, QRS ou T. Arrêt cardiaque — choc électrique immédiat requis.',
+      hr: 0,
+      leads: {
+        I: function(b) { return generateChaotic(); },
+        II: function(b) { return generateChaotic(); },
+        III: function(b) { return generateChaotic(); },
+        aVR: function(b) { return generateChaotic(); },
+        aVL: function(b) { return generateChaotic(); },
+        aVF: function(b) { return generateChaotic(); },
+        V1: function(b) { return generateChaotic(); },
+        V2: function(b) { return generateChaotic(); },
+        V3: function(b) { return generateChaotic(); },
+        V4: function(b) { return generateChaotic(); },
+        V5: function(b) { return generateChaotic(); },
+        V6: function(b) { return generateChaotic(); }
+      }
+    },
+    {
+      id: 'vtach',
+      name: 'Tachycardie ventriculaire',
+      shortName: 'Tachycardie ventriculaire',
+      description: 'Tachycardie régulaire à complexes larges (≥ 120 ms). Rate > 100 bpm. Urgence vitale, surtout si instabilité hémodynamique.',
+      hr: 180,
+      leads: {
+        I:   function(b) { return generateWideQRS(180, 'monomorphic'); },
+        II:  function(b) { return generateWideQRS(180, 'monomorphic'); },
+        III: function(b) { return generateWideQRS(180, 'monomorphic'); },
+        aVR: function(b) { return generateWideQRS(180, 'monomorphic'); },
+        aVL: function(b) { return generateWideQRS(180, 'monomorphic'); },
+        aVF: function(b) { return generateWideQRS(180, 'monomorphic'); },
+        V1:  function(b) { return generateWideQRS(180, 'monomorphic'); },
+        V2:  function(b) { return generateWideQRS(180, 'monomorphic'); },
+        V3:  function(b) { return generateWideQRS(180, 'monomorphic'); },
+        V4:  function(b) { return generateWideQRS(180, 'monomorphic'); },
+        V5:  function(b) { return generateWideQRS(180, 'monomorphic'); },
+        V6:  function(b) { return generateWideQRS(180, 'monomorphic'); }
+      }
+    },
+    {
+      id: 'torsades',
+      name: 'Torsades de Pointes',
+      shortName: 'Torsades de Pointes',
+      description: 'Tachycardie ventriculaire polymorphe avec axe tournoyant. Les complexes QRS semblent « tourner » autour de la ligne isoélectrique. Précédée d\'un QT long.',
+      hr: 220,
+      leads: {
+        II: function(b, lead) { return generateTorsades(lead); },
+        V1: function(b, lead) { return generateTorsades(lead); },
+        V3: function(b, lead) { return generateTorsades(lead); },
+        V5: function(b, lead) { return generateTorsades(lead); }
+      }
+    },
+    {
+      id: 'preexcited_afib',
+      name: 'FA pré-excitée (WPW)',
+      shortName: 'FA pré-excitée',
+      description: 'Rythme extrêmement rapide et irrégulier avec complexes QRS larges et bizarres. Fibrillation auriculaire conduite via une voie accessoire (Wolff-Parkinson-White). Risque de FV.',
+      hr: 0,
+      leads: {
+        I:   function(b) { return generatePreexcitedAFib(); },
+        II:  function(b) { return generatePreexcitedAFib(); },
+        III: function(b) { return generatePreexcitedAFib(); },
+        aVR: function(b) { return generatePreexcitedAFib(); },
+        aVL: function(b) { return generatePreexcitedAFib(); },
+        aVF: function(b) { return generatePreexcitedAFib(); },
+        V1:  function(b) { return generatePreexcitedAFib(); },
+        V2:  function(b) { return generatePreexcitedAFib(); },
+        V3:  function(b) { return generatePreexcitedAFib(); },
+        V4:  function(b) { return generatePreexcitedAFib(); },
+        V5:  function(b) { return generatePreexcitedAFib(); },
+        V6:  function(b) { return generatePreexcitedAFib(); }
+      }
+    },
+    {
+      id: 'third_degree_block',
+      name: 'Bloc AV du 3e degré',
+      shortName: 'Bloc AV 3°',
+      description: 'Dissociation AV complète : les ondes P et les complexes QRS « défilent » indépendamment. Aucune relation entre P et QRS. Rythme d\u2019échappement jonctionnel ou ventriculaire.',
+      hr: 45,
+      leads: {
+        II: function(b, lead) { return generateAVBlock(lead, 45, 3); },
+        V1: function(b, lead) { return generateAVBlock(lead, 45, 3); }
+      }
+    },
+    {
+      id: 'mobitz2',
+      name: 'Bloc AV Mobitz II',
+      shortName: 'Mobitz II',
+      description: 'Blocs intermittents, soudains, de la conduction AV. Les intervalles PR restent constants avant le QRS tombé. Risque de bloc complet. Indication de pacemaker.',
+      hr: 70,
+      leads: {
+        II: function(b, lead) { return generateAVBlock(lead, 70, 2); },
+        V1: function(b, lead) { return generateAVBlock(lead, 70, 2); }
+      }
+    },
+    {
+      id: 'new_lbbb',
+      name: 'BBG nouveau',
+      shortName: 'BBG nouveau',
+      description: 'Bloc de branche gauche : QRS large (≥ 120 ms) avec aspect en « M » cranté en V5-V6 et QS en V1. Un BBG nouveau est un équivalent de STEMI.',
+      hr: 80,
+      leads: {
+        I:  function(b) { return generateLBBB(b, 'I'); },
+        aVL:function(b) { return generateLBBB(b, 'aVL'); },
+        V1: function(b) { return generateLBBB(b, 'V1'); },
+        V5: function(b) { return generateLBBB(b, 'V5'); },
+        V6: function(b) { return generateLBBB(b, 'V6'); }
+      }
+    },
+    {
+      id: 'hyperkalemia',
+      name: 'Hyperkaliémie',
+      shortName: 'Hyperkaliémie',
+      description: 'Ondes T amples, pointues, « en tente ». P aplatis et QRS élargis à mesure que la sévérité augmente. Risque d\'asystolie ou de FV. Urgence métabolique.',
+      hr: 75,
+      leads: {
+        V2: function(b) { scaleTWave(b, 0.30, 0.50, 4.0); return b; },
+        V3: function(b) { scaleTWave(b, 0.30, 0.50, 4.0); return b; },
+        V4: function(b) { scaleTWave(b, 0.30, 0.50, 4.0); return b; },
+        II: function(b) { scaleTWave(b, 0.30, 0.50, 3.5); return b; }
+      }
+    },
+    {
+      id: 'long_qt',
+      name: 'Syndrome du QT long',
+      shortName: 'QT long',
+      description: 'QT corrigé (QTc) prolongé > 500 ms. Ondes T parfois crantées ou d\'amplitude réduite. Risque de torsades de Pointes et de mort subite.',
+      hr: 65,
+      leads: {
+        II: function(b) { return generateLongQT(b); },
+        V5: function(b) { return generateLongQT(b); },
+        V6: function(b) { return generateLongQT(b); }
+      }
+    },
+    {
+      id: 'brugada',
+      name: 'Syndrome de Brugada',
+      shortName: 'Brugada',
+      description: 'Sus-décalage ST coudé > 2 mm suivi d\'une onde T négative en V1-V3 (Type 1). Canalopathie héréditaire, risque de mort subite par FV.',
+      hr: 70,
+      leads: {
+        V1: function(b) { addStShift(b, 0.26, 0.38, 0.30); invertTWave(b, 0.38, 0.50); return b; },
+        V2: function(b) { addStShift(b, 0.26, 0.38, 0.35); invertTWave(b, 0.38, 0.50); return b; },
+        V3: function(b) { addStShift(b, 0.26, 0.38, 0.20); invertTWave(b, 0.38, 0.50); return b; }
+      }
+    },
+    {
+      id: 's1q3t3',
+      name: 'S1Q3T3 (Embolie pulmonaire)',
+      shortName: 'S1Q3T3 (EP)',
+      description: 'Onde S profonde en DI, onde Q et onde T inversée en DIII. Signe de cœur pulmonaire aigu. Suggère une embolie pulmonaire massive.',
+      hr: 110,
+      leads: {
+        I:   function(b) { return generateS1Q3T3(b, 'I'); },
+        III: function(b) { return generateS1Q3T3(b, 'III'); }
+      }
+    }
+  ];
+
+  /* ============================================================================
+   * Générateurs spécialisés pour rythmes complexes
+   * ========================================================================== */
+
+  // Fibrillation ventriculaire : tracé chaotique
+  function generateChaotic() {
+    var beat = [];
+    var duration = 4.0;  // 4 secondes
+    var step = 0.01;
+    var phase1 = Math.random() * Math.PI * 2;
+    var phase2 = Math.random() * Math.PI * 2;
+    var phase3 = Math.random() * Math.PI * 2;
+    for (var t = 0; t <= duration; t += step) {
+      var mv = 0;
+      mv += Math.sin(t * 18 + phase1) * (0.3 + Math.random() * 0.2);
+      mv += Math.sin(t * 31 + phase2) * (0.2 + Math.random() * 0.15);
+      mv += Math.sin(t * 47 + phase3) * (0.15 + Math.random() * 0.1);
+      mv += (Math.random() - 0.5) * 0.15;
+      beat.push({t: t, mv: mv});
+    }
+    return beat;
+  }
+
+  // Tachycardie ventriculaire monomorphe : QRS larges et réguliers
+  function generateWideQRS(hr, type) {
+    hr = hr || 180;
+    var hrInterval = 60 / hr;
+    var beat = [];
+    var qrsWidth = 0.16;  // 160 ms — QRS large
+    var totalDuration = 4.0;
+    var t = 0;
+    while (t < totalDuration) {
+      // Petit segment de base
+      for (var dt = 0; dt < 0.02; dt += 0.005) {
+        beat.push({t: t + dt, mv: 0 + (Math.random() - 0.5) * 0.02});
+      }
+      t += 0.02;
+      // QRS large monomorphe
+      var amplitude = 1.2 + (type === 'polymorphic' ? (Math.random() - 0.5) * 0.4 : 0);
+      // Déflexion initiale
+      for (var dt = 0; dt < qrsWidth * 0.3; dt += 0.005) {
+        var frac = dt / (qrsWidth * 0.3);
+        beat.push({t: t + dt, mv: frac * amplitude});
+      }
+      t += qrsWidth * 0.3;
+      // Pic
+      for (var dt = 0; dt < qrsWidth * 0.2; dt += 0.005) {
+        beat.push({t: t + dt, mv: amplitude});
+      }
+      t += qrsWidth * 0.2;
+      // Descente
+      for (var dt = 0; dt < qrsWidth * 0.3; dt += 0.005) {
+        var frac = dt / (qrsWidth * 0.3);
+        beat.push({t: t + dt, mv: amplitude - frac * (amplitude * 1.3)});
+      }
+      t += qrsWidth * 0.3;
+      // Retour à la ligne
+      for (var dt = 0; dt < qrsWidth * 0.2; dt += 0.005) {
+        var frac = dt / (qrsWidth * 0.2);
+        beat.push({t: t + dt, mv: -amplitude * 0.3 + frac * amplitude * 0.3});
+      }
+      t += qrsWidth * 0.2;
+      // Onde T opposée
+      for (var dt = 0; dt < 0.10; dt += 0.005) {
+        var frac = dt / 0.10;
+        var mv = -0.4 * Math.sin(frac * Math.PI);
+        beat.push({t: t + dt, mv: mv});
+      }
+      t += 0.10;
+    }
+    return beat;
+  }
+
+  // Torsades de Pointes : amplitude variable qui « tourne »
+  function generateTorsades(lead) {
+    var beat = [];
+    var hr = 220;
+    var hrInterval = 60 / hr;
+    var totalDuration = 4.0;
+    var t = 0;
+    var cycleCount = 0;
+    while (t < totalDuration) {
+      // L'amplitude oscule progressivement (effet « tournoyant »)
+      var envelope = Math.sin(t * 2.5) * 0.8;
+      var qrsWidth = 0.14;
+      // QRS
+      for (var dt = 0; dt < qrsWidth; dt += 0.005) {
+        var frac = dt / qrsWidth;
+        var mv = Math.sin(frac * Math.PI) * envelope;
+        mv += (Math.random() - 0.5) * 0.05;
+        beat.push({t: t + dt, mv: mv});
+      }
+      t += qrsWidth;
+      // Petit segment
+      for (var dt = 0; dt < 0.02; dt += 0.005) {
+        beat.push({t: t + dt, mv: 0 + (Math.random() - 0.5) * 0.03});
+      }
+      t += 0.02;
+      cycleCount++;
+    }
+    return beat;
+  }
+
+  // FA pré-excitée : irrégulière, QRS larges et bizarres
+  function generatePreexcitedAFib() {
+    var beat = [];
+    var totalDuration = 4.0;
+    var t = 0;
+    while (t < totalDuration) {
+      // Intervalle RR très irrégulier (FA)
+      var rr = 0.35 + Math.random() * 0.55;
+      var qrsWidth = 0.12 + Math.random() * 0.04;
+      var amplitude = 0.8 + Math.random() * 0.4;
+      // Onde delta (pré-excitation)
+      for (var dt = 0; dt < qrsWidth * 0.4; dt += 0.005) {
+        var frac = dt / (qrsWidth * 0.4);
+        beat.push({t: t + dt, mv: frac * amplitude * 0.5});
+      }
+      t += qrsWidth * 0.4;
+      // QRS
+      for (var dt = 0; dt < qrsWidth * 0.4; dt += 0.005) {
+        var frac = dt / (qrsWidth * 0.4);
+        beat.push({t: t + dt, mv: amplitude * 0.5 + frac * amplitude * 0.5});
+      }
+      t += qrsWidth * 0.4;
+      // Descente
+      for (var dt = 0; dt < qrsWidth * 0.2; dt += 0.005) {
+        var frac = dt / (qrsWidth * 0.2);
+        beat.push({t: t + dt, mv: amplitude - frac * amplitude * 1.2});
+      }
+      t += qrsWidth * 0.2;
+      // Retour
+      for (var dt = 0; dt < 0.05; dt += 0.005) {
+        beat.push({t: t + dt, mv: -amplitude * 0.2 + (Math.random() - 0.5) * 0.05});
+      }
+      t += 0.05;
+      // Onde T
+      for (var dt = 0; dt < 0.10; dt += 0.005) {
+        var frac = dt / 0.10;
+        beat.push({t: t + dt, mv: -0.3 * Math.sin(frac * Math.PI)});
+      }
+      t += 0.10;
+      // Fibrillation auriculaire (ondes fibratoires)
+      var fibDur = Math.max(0, rr - (t % rr === 0 ? 0 : 0));
+      for (var dt = 0; dt < 0.08; dt += 0.005) {
+        beat.push({t: t + dt, mv: (Math.random() - 0.5) * 0.08});
+      }
+      t += 0.08;
+    }
+    return beat;
+  }
+
+  // Bloc AV : 2e degré (Mobitz II) ou 3e degré
+  function generateAVBlock(lead, hr, degree) {
+    var coeff = baseLeadCoeff[LEADS.indexOf(lead)];
+    var beat = [];
+    var hrInterval = 60 / hr;
+    var qrsInterval = 0.08;
+    var pr = 0.18;
+    var qt = 0.33;
+    var stInterval = Math.max(0, qt - qrsInterval);
+    var stSegment = stInterval * (1/3);
+    var tInterval = stInterval * (2/3);
+
+    var t = 0;
+    var totalDuration = 4.0;
+    var beatNum = 0;
+
+    while (t < totalDuration) {
+      // Génère l'onde P
+      var pPts = peak((pr*2)/3, 0.1 * coeff[WP.P], 0, 0);
+      for (var i = 0; i < pPts.length; i++) {
+        if (t + pPts[i].t < totalDuration) beat.push({t: t + pPts[i].t, mv: pPts[i].mv});
+      }
+      t += (pr*2)/3;
+      // Segment PR
+      var prPts = line(pr/3, 0, 0);
+      for (var i = 0; i < prPts.length; i++) {
+        if (t + prPts[i].t < totalDuration) beat.push({t: t + prPts[i].t, mv: prPts[i].mv});
+      }
+      t += pr/3;
+
+      // Mobitz II : tomber le QRS toutes les 3 ondes P
+      var dropQRS = (degree === 2 && beatNum > 0 && beatNum % 3 === 0);
+      // 3e degré : P et QRS indépendants — on génère un QRS à un rythme plus lent
+      if (degree === 3) {
+        // Pour le 3e degré, on génère un QRS à un rythme d'échappement
+        // en ignorant le P qu'on vient de poser. On le décale.
+        // Pour simplicité, on génère un QRS régulier à hr/2.
+        dropQRS = (beatNum % 2 === 0);  // alterne P seul et P+QRS
+      }
+
+      if (!dropQRS) {
+        // QRS
+        var qPts = line(qrsInterval/4, -0.05 * coeff[WP.Q], 0);
+        for (var i = 0; i < qPts.length; i++) beat.push({t: t + qPts[i].t, mv: qPts[i].mv});
+        t += qrsInterval/4;
+        var rPts = line(qrsInterval/4, 0.9 * coeff[WP.R], beat.length > 0 ? beat[beat.length-1].mv : 0);
+        for (var i = 0; i < rPts.length; i++) beat.push({t: t + rPts[i].t, mv: rPts[i].mv});
+        t += qrsInterval/4;
+        var sPts = line(qrsInterval/4, -0.3 * coeff[WP.S], beat.length > 0 ? beat[beat.length-1].mv : 0);
+        for (var i = 0; i < sPts.length; i++) beat.push({t: t + sPts[i].t, mv: sPts[i].mv});
+        t += qrsInterval/4;
+        var jPts = line(qrsInterval/4, -0.1 * coeff[WP.J], beat.length > 0 ? beat[beat.length-1].mv : 0);
+        for (var i = 0; i < jPts.length; i++) beat.push({t: t + jPts[i].t, mv: jPts[i].mv});
+        t += qrsInterval/4;
+        // ST + T
+        var stPts = line(stSegment, 0, beat.length > 0 ? beat[beat.length-1].mv : 0);
+        for (var i = 0; i < stPts.length; i++) beat.push({t: t + stPts[i].t, mv: stPts[i].mv});
+        t += stSegment;
+        var tPts = peak(tInterval, 0.2 * coeff[WP.T], 0, beat.length > 0 ? beat[beat.length-1].mv : 0);
+        for (var i = 0; i < tPts.length; i++) beat.push({t: t + tPts[i].t, mv: tPts[i].mv});
+        t += tInterval;
+      }
+
+      // Segment TP jusqu'au prochain P
+      var nextPTime = (beatNum + 1) * hrInterval;
+      while (t < nextPTime && t < totalDuration) {
+        beat.push({t: t, mv: 0});
+        t += 0.01;
+      }
+      beatNum++;
+    }
+    return beat;
+  }
+
+  // Bloc de branche gauche (LBBB)
+  function generateLBBB(b, lead) {
+    // Élargir le QRS à 140 ms et ajouter l'encoche en M
+    var coeff = baseLeadCoeff[LEADS.indexOf(lead)];
+    var hr = 80;
+    var hrInterval = 60 / hr;
+    var qrsInterval = 0.14;  // 140 ms
+    var pr = 0.18;
+    var qt = 0.40;
+    var stInterval = Math.max(0, qt - qrsInterval);
+    var stSegment = stInterval * (1/3);
+    var tInterval = stInterval * (2/3);
+
+    var beat = [];
+    var cursor = {t:0, mv:0};
+
+    function append(pts) {
+      for (var i = 0; i < pts.length; i++) beat.push({t: cursor.t + pts[i].t, mv: pts[i].mv});
+      if (pts.length > 0) cursor = {t: cursor.t + pts[pts.length-1].t, mv: pts[pts.length-1].mv};
+    }
+
+    append(peak((pr*2)/3, 0.1 * coeff[WP.P], 0, cursor.mv));
+    append(line(pr/3, 0, cursor.mv));
+
+    // QRS large avec encoche
+    if (lead === 'V5' || lead === 'V6' || lead === 'I' || lead === 'aVL') {
+      // Aspect en M : petite bosse, grande bosse, petite bosse
+      append(line(qrsInterval * 0.25, 0.4, cursor.mv));
+      append(line(qrsInterval * 0.15, 0.2, cursor.mv));  // redescente
+      append(line(qrsInterval * 0.30, 0.8, cursor.mv));  // seconde bosse plus grande
+      append(line(qrsInterval * 0.15, 0.0, cursor.mv));  // descente
+      append(line(qrsInterval * 0.15, -0.1, cursor.mv)); // fin
+    } else if (lead === 'V1') {
+      // QS profond
+      append(line(qrsInterval * 0.40, -0.6, cursor.mv));
+      append(line(qrsInterval * 0.30, -0.2, cursor.mv));
+      append(line(qrsInterval * 0.30, 0.0, cursor.mv));
+    } else {
+      append(line(qrsInterval * 0.25, 0.3 * coeff[WP.R], cursor.mv));
+      append(line(qrsInterval * 0.25, -0.2 * coeff[WP.S], cursor.mv));
+      append(line(qrsInterval * 0.25, 0.5 * coeff[WP.R], cursor.mv));
+      append(line(qrsInterval * 0.25, -0.1, cursor.mv));
+    }
+
+    // ST + T inversés (discorde)
+    append(line(stSegment, -0.1 * (coeff[WP.T] > 0 ? 1 : -1), cursor.mv));
+    append(peak(tInterval, -0.2 * Math.abs(coeff[WP.T]), 0, cursor.mv));
+
+    var tpLen = Math.max(0, hrInterval - cursor.t);
+    append(line(tpLen, 0, cursor.mv));
+    if (beat.length > 0) beat[beat.length-1].t = hrInterval;
+    return beat;
+  }
+
+  // QT long : étire l'intervalle QT
+  function generateLongQT(b) {
+    // Le beat original a un QT ~ 0.33s. On l'étire à ~ 0.55s.
+    var beat = b.slice();
+    var qtOriginal = 0.33;
+    var qtLong = 0.55;
+    var stretchFactor = qtLong / qtOriginal;
+    // Trouver le début du QRS (environ t = 0.18 pour PR=0.18)
+    var qrsStart = 0.18;
+    var newBeat = [];
+    for (var i = 0; i < beat.length; i++) {
+      var pt = beat[i];
+      if (pt.t >= qrsStart) {
+        // Étirer la portion QRS-T
+        var newT = qrsStart + (pt.t - qrsStart) * stretchFactor;
+        newBeat.push({t: newT, mv: pt.mv});
+      } else {
+        newBeat.push({t: pt.t, mv: pt.mv});
+      }
+    }
+    // Compresser le segment TP restant pour tenir dans hrInterval
+    var hrInterval = beat[beat.length-1].t;
+    var lastT = newBeat[newBeat.length-1].t;
+    if (lastT > hrInterval) {
+      // Si on dépasse, on tronque
+      while (newBeat.length > 0 && newBeat[newBeat.length-1].t > hrInterval) {
+        newBeat.pop();
+      }
+      if (newBeat.length > 0) newBeat[newBeat.length-1].t = hrInterval;
+    }
+    return newBeat;
+  }
+
+  // S1Q3T3 : onde S profonde en DI, Q et T inversée en DIII
+  function generateS1Q3T3(b, lead) {
+    var beat = b.slice();
+    if (lead === 'I') {
+      // Ajouter une onde S profonde : descendre après le R
+      for (var i = 0; i < beat.length; i++) {
+        // Le S se situe juste après le R (t ≈ 0.28-0.32)
+        if (beat[i].t > 0.26 && beat[i].t < 0.34) {
+          beat[i].mv -= 0.4;  // S profond
+        }
+      }
+    } else if (lead === 'III') {
+      // Onde Q + T inversée
+      for (var i = 0; i < beat.length; i++) {
+        if (beat[i].t > 0.20 && beat[i].t < 0.26) {
+          beat[i].mv -= 0.3;  // Q
+        }
+        if (beat[i].t > 0.32 && beat[i].t < 0.50) {
+          if (beat[i].mv > 0) beat[i].mv = -beat[i].mv;  // T inversée
+        }
+      }
+    }
+    return beat;
+  }
+
+  /* ============================================================================
+   * Génération d'un ECG complet avec anomalie
+   * ========================================================================== */
+  function generateAnomalyBeat(lead, anomaly) {
+    var hr = anomaly.hr || 80;
+    var normalBeat = generateNormalBeat(lead, hr, 0.08);
+    if (anomaly.leads[lead]) {
+      return anomaly.leads[lead](normalBeat, lead);
+    }
+    return normalBeat;
+  }
+
+  /* ============================================================================
+   * Afficheurs ECG (12 instances)
+   * ========================================================================== */
+  var VISIBLE_SECONDS = 4;
+  var SWEEP_MM_PER_S = 25;
+  var GAIN_MM_PER_MV = 10;
+
+  var displays = [];
+  var sharedTime = 0;
+  var state = {
+    paused: false,
+    currentAnomaly: null,
+    answered: false,
+    seenAnomalies: [],
+    correctCount: 0,
+    totalAnswered: 0
+  };
+
+  function createDisplay(canvas, leadId) {
+    var ctx = canvas.getContext('2d');
+    return {
+      canvas: canvas,
+      ctx: ctx,
+      leadId: leadId,
+      beat: [],
+      samples: new Float32Array(0),
+      playhead: 0,
+      dims: {width:0, height:0, pixelsPerMm:4, pixelsPerSecond:100, pixelsPerMv:40, centerY:0}
+    };
+  }
+
+  function setupDisplay(d) {
+    var wrap = d.canvas.parentElement;
+    var rect = wrap.getBoundingClientRect();
+    var cssW = Math.max(1, Math.floor(rect.width));
+    var cssH = Math.max(1, Math.floor(rect.height));
+    var dpr = Math.max(1, window.devicePixelRatio || 1);
+
+    d.ctx.setTransform(1, 0, 0, 1, 0, 0);
+    d.canvas.width = cssW * dpr;
+    d.canvas.height = cssH * dpr;
+    d.canvas.style.width = cssW + 'px';
+    d.canvas.style.height = cssH + 'px';
+    d.ctx.scale(dpr, dpr);
+
+    var pixelsPerMm = cssW / (VISIBLE_SECONDS * SWEEP_MM_PER_S);
+    // Plafonner pixelsPerMv pour que les amplitudes extrêmes (FV, TV) tiennent
+    var maxAmpMv = 2.0;
+    var maxPixelsPerMv = (cssH / 2 - 10) / maxAmpMv;
+    var pixelsPerMv = Math.min(pixelsPerMm * GAIN_MM_PER_MV, maxPixelsPerMv);
+
+    d.dims = {
+      width: cssW, height: cssH,
+      pixelsPerMm: pixelsPerMm,
+      pixelsPerSecond: pixelsPerMm * SWEEP_MM_PER_S,
+      pixelsPerMv: pixelsPerMv,
+      centerY: cssH / 2
+    };
+
+    if (d.samples.length !== cssW) {
+      var oldSamples = d.samples;
+      d.samples = new Float32Array(cssW);
+      var copyLen = Math.min(oldSamples.length, cssW);
+      for (var i = 0; i < copyLen; i++) d.samples[i] = oldSamples[i];
+    }
+  }
+
+  function drawGrid(d) {
+    var dim = d.dims;
+    var w = dim.width, h = dim.height, pxmm = dim.pixelsPerMm;
+
+    d.ctx.strokeStyle = '#ffc7d4';
+    d.ctx.lineWidth = 0.5;
+    d.ctx.beginPath();
+    for (var x = 0; x <= w + 0.5; x += pxmm) {
+      var xx = Math.round(x) + 0.5;
+      d.ctx.moveTo(xx, 0); d.ctx.lineTo(xx, h);
+    }
+    for (var y = 0; y <= h + 0.5; y += pxmm) {
+      var yy = Math.round(y) + 0.5;
+      d.ctx.moveTo(0, yy); d.ctx.lineTo(w, yy);
+    }
+    d.ctx.stroke();
+
+    d.ctx.strokeStyle = '#f78da3';
+    d.ctx.lineWidth = 1;
+    d.ctx.beginPath();
+    var big = pxmm * 5;
+    for (var x = 0; x <= w + 0.5; x += big) {
+      var xx = Math.round(x) + 0.5;
+      d.ctx.moveTo(xx, 0); d.ctx.lineTo(xx, h);
+    }
+    for (var y = 0; y <= h + 0.5; y += big) {
+      var yy = Math.round(y) + 0.5;
+      d.ctx.moveTo(0, yy); d.ctx.lineTo(w, yy);
+    }
+    d.ctx.stroke();
+  }
+
+  function renderDisplay(d) {
+    var dim = d.dims;
+    var w = dim.width, h = dim.height, pxmv = dim.pixelsPerMv, cy = dim.centerY;
+
+    d.ctx.fillStyle = '#fff8fa';
+    d.ctx.fillRect(0, 0, w, h);
+    drawGrid(d);
+
+    d.ctx.strokeStyle = '#0a0a0a';
+    d.ctx.lineWidth = 1.2;
+    d.ctx.lineJoin = 'round';
+    d.ctx.lineCap = 'round';
+    d.ctx.beginPath();
+
+    var samples = d.samples;
+    var n = samples.length;
+    if (n > 0) {
+      var playhead = Math.floor(d.playhead) % n;
+      for (var i = 0; i < n; i++) {
+        var idx = (playhead + i) % n;
+        var mv = samples[idx];
+        var y = cy - mv * pxmv;
+        if (i === 0) d.ctx.moveTo(i, y);
+        else d.ctx.lineTo(i, y);
+      }
+      d.ctx.stroke();
+
+      // Point de tête
+      var newestIdx = (playhead - 1 + n) % n;
+      var newestMv = samples[newestIdx];
+      var newestY = cy - newestMv * pxmv;
+      d.ctx.fillStyle = '#0a0a0a';
+      d.ctx.beginPath();
+      d.ctx.arc(w - 1, newestY, 1.5, 0, Math.PI * 2);
+      d.ctx.fill();
+    }
+  }
+
+  function updateDisplay(d, dt) {
+    var samples = d.samples;
+    var n = samples.length;
+    var pps = d.dims.pixelsPerSecond;
+    if (n > 0 && pps > 0 && d.beat.length > 0) {
+      var newPixels = dt * pps;
+      var numSteps = Math.max(1, Math.ceil(newPixels));
+      for (var i = 1; i <= numSteps; i++) {
+        var fraction = i / numSteps;
+        var t = sharedTime + dt * fraction;
+        var mv = getMvAtTime(d.beat, t);
+        var pixelX = Math.floor((d.playhead + newPixels * fraction) % n);
+        if (pixelX >= 0 && pixelX < n) samples[pixelX] = mv;
+      }
+      d.playhead = (d.playhead + newPixels) % n;
+    }
+  }
+
+  /* ============================================================================
+   * Construction du panneau ECG (12 lignes)
+   * ========================================================================== */
+  function buildECGPanel() {
+    var panel = document.getElementById('ecg-panel');
+    panel.innerHTML = '';
+
+    LEADS.forEach(function (lead) {
+      var row = document.createElement('div');
+      row.className = 'ecg-row';
+
+      var labelDiv = document.createElement('div');
+      labelDiv.className = 'lead-label';
+      var nameSpan = document.createElement('span');
+      nameSpan.className = 'name';
+      nameSpan.textContent = LEAD_LABEL[lead];
+      labelDiv.appendChild(nameSpan);
+
+      var canvasWrap = document.createElement('div');
+      canvasWrap.className = 'canvas-wrap';
+      var canvas = document.createElement('canvas');
+      canvasWrap.appendChild(canvas);
+
+      var scaleAnno = document.createElement('div');
+      scaleAnno.className = 'scale-anno';
+      scaleAnno.textContent = '25 mm/s';
+      canvasWrap.appendChild(scaleAnno);
+
+      row.appendChild(labelDiv);
+      row.appendChild(canvasWrap);
+      panel.appendChild(row);
+
+      displays.push(createDisplay(canvas, lead));
+    });
+  }
+
+  /* ============================================================================
+   * Boucle d'animation
+   * ========================================================================== */
+  var lastFrameTime = 0;
+
+  function frame(now) {
+    if (lastFrameTime === 0) lastFrameTime = now;
+    var dt = Math.min(0.1, (now - lastFrameTime) / 1000);
+    lastFrameTime = now;
+
+    if (!state.paused) {
+      sharedTime += dt;
+      displays.forEach(function (d) { updateDisplay(d, dt); });
+    }
+
+    displays.forEach(renderDisplay);
+    requestAnimationFrame(frame);
+  }
+
+  /* ============================================================================
+   * Logique du quiz
+   * ========================================================================== */
+
+  // Mélange un tableau (Fisher-Yates)
+  function shuffle(arr) {
+    var a = arr.slice();
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+
+  // Choisit la prochaine anomalie non encore vue
+  function pickNextAnomaly() {
+    var unseen = ANOMALIES.filter(function (a) {
+      return state.seenAnomalies.indexOf(a.id) === -1;
+    });
+    if (unseen.length === 0) return null;
+    return unseen[Math.floor(Math.random() * unseen.length)];
+  }
+
+  // Génère 4 choix : la bonne réponse + 3 distracteurs aléatoires
+  function generateChoices(correctAnomaly) {
+    var distracteurs = ANOMALIES.filter(function (a) {
+      return a.id !== correctAnomaly.id;
+    });
+    distracteurs = shuffle(distracteurs).slice(0, 3);
+    var choices = shuffle([correctAnomaly].concat(distracteurs));
+    return choices;
+  }
+
+  // Charge une nouvelle anomalie dans l'ECG
+  function loadAnomaly(anomaly) {
+    state.currentAnomaly = anomaly;
+    state.answered = false;
+    sharedTime = 0;
+
+    // Régénère les beats pour les 12 dérivations
+    displays.forEach(function (d) {
+      d.beat = generateAnomalyBeat(d.leadId, anomaly);
+      d.playhead = 0;
+      if (d.samples) d.samples.fill(0);
+    });
+
+    // Affiche les choix
+    var choices = generateChoices(anomaly);
+    var grid = document.getElementById('choices-grid');
+    grid.innerHTML = '';
+    choices.forEach(function (choice, idx) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'choice-btn';
+      btn.dataset.anomalyId = choice.id;
+      btn.innerHTML = '<span class="choice-letter">' + String.fromCharCode(65 + idx) + '</span>' +
+                      '<span>' + choice.shortName + '</span>';
+      btn.addEventListener('click', function () { handleChoice(choice, btn); });
+      grid.appendChild(btn);
+    });
+
+    // Réinitialise le feedback
+    var feedback = document.getElementById('feedback');
+    feedback.className = 'feedback';
+    feedback.innerHTML = '';
+    document.getElementById('next-btn').classList.remove('visible');
+    document.getElementById('quiz-hint').textContent = 'Sélectionnez une réponse. Vous pouvez essayer autant de fois que voulu.';
+  }
+
+  // Gère le clic sur un choix
+  function handleChoice(choice, btn) {
+    if (state.answered) return;
+
+    var isCorrect = choice.id === state.currentAnomaly.id;
+    var feedback = document.getElementById('feedback');
+    var allBtns = document.querySelectorAll('.choice-btn');
+
+    if (isCorrect) {
+      btn.classList.add('correct');
+      state.answered = true;
+      state.seenAnomalies.push(state.currentAnomaly.id);
+      state.correctCount++;
+      state.totalAnswered++;
+
+      feedback.className = 'feedback success';
+      feedback.innerHTML = '<strong>✓ Correct !</strong> ' + state.currentAnomaly.name + '.' +
+                           '<div class="detail">' + state.currentAnomaly.description + '</div>';
+
+      // Révéler la bonne réponse sur les autres boutons
+      allBtns.forEach(function (b) {
+        b.disabled = true;
+        if (b.dataset.anomalyId === state.currentAnomaly.id && b !== btn) {
+          b.classList.add('reveal');
+        }
+      });
+
+      // Afficher le bouton suivant ou l'écran de completion
+      var remaining = ANOMALIES.length - state.seenAnomalies.length;
+      var nextBtn = document.getElementById('next-btn');
+      if (remaining > 0) {
+        nextBtn.textContent = 'Cas suivant (' + remaining + ' restant' + (remaining > 1 ? 's' : '') + ') →';
+        nextBtn.classList.add('visible');
+      } else {
+        nextBtn.textContent = 'Voir le résultat →';
+        nextBtn.classList.add('visible');
+      }
+      updateProgress();
+    } else {
+      // Mauvaise réponse
+      btn.classList.add('wrong');
+      btn.disabled = true;
+      state.totalAnswered++;
+
+      feedback.className = 'feedback error';
+      feedback.innerHTML = '<strong>✗ Incorrect.</strong> Ce n\'est pas <em>' + choice.name + '</em>. Réessayez.';
+      document.getElementById('quiz-hint').textContent = 'Réessayez — il vous reste ' +
+        document.querySelectorAll('.choice-btn:not(:disabled)').length + ' choix.';
+    }
+  }
+
+  function updateProgress() {
+    var badge = document.getElementById('progress-badge');
+    badge.textContent = state.seenAnomalies.length + ' / ' + ANOMALIES.length + ' vues';
+  }
+
+  function nextCase() {
+    var next = pickNextAnomaly();
+    if (next) {
+      loadAnomaly(next);
+    } else {
+      // Écran de completion
+      document.getElementById('choices-grid').innerHTML = '';
+      document.getElementById('feedback').className = 'feedback';
+      document.getElementById('feedback').innerHTML = '';
+      document.getElementById('next-btn').classList.remove('visible');
+      document.getElementById('quiz-question').textContent = '';
+      document.getElementById('quiz-hint').textContent = '';
+      var screen = document.getElementById('completion-screen');
+      screen.classList.add('visible');
+      document.getElementById('completion-stats').textContent =
+        state.correctCount + ' / ' + ANOMALIES.length + ' correctes';
+    }
+  }
+
+  function restart() {
+    state.seenAnomalies = [];
+    state.correctCount = 0;
+    state.totalAnswered = 0;
+    document.getElementById('completion-screen').classList.remove('visible');
+    document.getElementById('quiz-question').textContent = 'Identifiez l\'anomalie cardiaque présentée dans cet ECG.';
+    updateProgress();
+    nextCase();
+  }
+
+  /* ============================================================================
+   * Bouton Pause
+   * ========================================================================== */
+  var pauseBtn = document.getElementById('pause-btn');
+  function togglePause() {
+    state.paused = !state.paused;
+    if (state.paused) {
+      pauseBtn.textContent = '▶';
+      pauseBtn.classList.add('paused');
+      pauseBtn.setAttribute('aria-pressed', 'true');
+      pauseBtn.setAttribute('aria-label', 'Reprendre le balayage');
+    } else {
+      pauseBtn.textContent = '⏸';
+      pauseBtn.classList.remove('paused');
+      pauseBtn.setAttribute('aria-pressed', 'false');
+      pauseBtn.setAttribute('aria-label', 'Mettre en pause le balayage');
+      lastFrameTime = 0;
+    }
+  }
+  pauseBtn.addEventListener('click', togglePause);
+  document.addEventListener('keydown', function (e) {
+    if (e.key === ' ' || e.key === 'Spacebar') {
+      var tag = (e.target.tagName || '').toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+      e.preventDefault();
+      togglePause();
+    }
+  });
+
+  /* ============================================================================
+   * Initialisation
+   * ========================================================================== */
+  buildECGPanel();
+  displays.forEach(setupDisplay);
+
+  // Charge la première anomalie
+  var firstAnomaly = pickNextAnomaly();
+  if (firstAnomaly) loadAnomaly(firstAnomaly);
+  updateProgress();
+
+  document.getElementById('next-btn').addEventListener('click', nextCase);
+  document.getElementById('restart-btn').addEventListener('click', restart);
+
+  // Resize observer
+  if (window.ResizeObserver) {
+    var ro = new ResizeObserver(function () {
+      displays.forEach(setupDisplay);
+    });
+    ro.observe(document.getElementById('ecg-panel'));
+  } else {
+    window.addEventListener('resize', function () {
+      displays.forEach(setupDisplay);
+    });
+  }
+
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
