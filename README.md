@@ -24,6 +24,7 @@ La simulation haute fidélité ne devrait pas nécessiter un budget important ni
 | **Étiqueteur d'ondes** | Entraînez-vous à identifier les ondes P, QRS et T sur les tracés ECG. | [Ouvrir l'application](etiqueteur-ondes.html) |
 | **Trouver l'erreur** | Entraînement diagnostique pour repérer les anomalies dans les tracés ECG. | [Ouvrir l'application](trouver-erreur.html) |
 | **ECG-anomalies** | Quiz diagnostique avancé : 17 anomalies ECG critiques (STEMI, Brugada, Torsades, etc.) à identifier sur 12 dérivations. | [Ouvrir l'application](ecg-anomalies.html) |
+| **Capno-bases** | Simulateur de capnographie : pilotez V̇CO₂, Q̇ et V̇A pour comprendre les déterminants de l'EtCO₂ en temps réel. | [Ouvrir l'application](capno-bases.html) |
 
 *D'autres simulations (respirateurs artificiels, moniteurs, pousse-seringues) arriveront bientôt !*
 
