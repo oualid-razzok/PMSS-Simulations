@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ECG-anomalies — Quiz diagnostique</title>
+<title>ECG-anomalies Quiz diagnostique</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body {
@@ -244,14 +244,12 @@
   .retry-btn:hover { background: #e5e5e5; border-color: #1a1a1a; }
   .new-case-btn { background: #1a1a1a; color: #fff; }
   .new-case-btn:hover { background: #333; }
-
-  /* ===== Scrollbar ===== */
   .quiz-panel::-webkit-scrollbar { width: 6px; }
   .quiz-panel::-webkit-scrollbar-track { background: transparent; }
   .quiz-panel::-webkit-scrollbar-thumb { background: #d4d4d4; border-radius: 3px; }
   .quiz-panel::-webkit-scrollbar-thumb:hover { background: #a3a3a3; }
 
-  /* ===== Mobile: larger touch targets ===== */
+  /* ===== Mobile ===== */
   @media (max-width: 600px) {
     .app-title h1 { font-size: 16px; }
     .app-title .subtitle { display: none; }
@@ -306,18 +304,6 @@
     V1:'V1',V2:'V2',V3:'V3',V4:'V4',V5:'V5',V6:'V6'
   };
 
-  /* ============================================================================
-   * Coefficients de base par dérivation (portés fidèlement de Infirmary Integrated)
-   * -------------------------------------------------------------------------
-   * Colonnes : QRST, P, Q, R, S, J, T, PR, ST, TP
-   * P à T sont des MULTIPLICATEURS ; PR/ST/TP sont des ADDITIONS.
-   *
-   * IMPORTANT : les valeurs négatives pour R en V4-V6 et Q négatif important
-   * sont INTENTIONNELS. L'amplitude de base Q = -0.05, donc Q × (-9.0) = +0.45
-   * (positive deflection = petit q). L'amplitude R = 0.9, donc R × (-0.8) = -0.72
-   * (négative = S wave dominant). C'est ainsi que le système produit les patterns
-   * précordiaux corrects (rS en V1, qR en V4-V6).
-   * ========================================================================== */
   var WP = { QRST:0, P:1, Q:2, R:3, S:4, J:5, T:6, PR:7, ST:8, TP:9 };
 
   var baseLeadCoeff = [
@@ -347,7 +333,6 @@
     };
   }
 
-  // Plotting.Peak — bosse lissée (Bézier) de startMv vers mv puis retour à mvEnd
   function peak(length, mv, mvEnd, startMv) {
     if (length <= 0) return [];
     var out = [];
@@ -363,7 +348,6 @@
     return out;
   }
 
-  // Plotting.Line — interpolation linéaire de startMv vers mv
   function line(length, mv, startMv) {
     if (length <= 0) return [];
     var out = [];
@@ -376,22 +360,7 @@
     return out;
   }
 
-  /* ============================================================================
-   * Génération d'un battement — portée fidèlement de Waveform.Draw.cs
-   * -------------------------------------------------------------------------
-   * leadConfig (optionnel) :
-   *   stElev     : élévation ST en mV (additive, comme p.ST_Elevation dans II)
-   *   stDep      : dépression ST en mV (additive, négative)
-   *   tElev      : élévation de l'onde T en mV (additive, comme p.T_Elevation)
-   *   tInvert    : true → inverser le signe de l'onde T
-   *   tFactor    : multiplicateur d'amplitude T (ex: 4.0 pour hyperkaliémie)
-   *   tPeaked    : true → T pointue (étroite et ample, hyperkaliémie)
-   *   tBiphasic  : true → T biphasique (Wellens Type A)
-   *   pFlat      : true → P aplatie (hyperkaliémie)
-   *   qrsWidth   : largeur du QRS en secondes (ex: 0.14 pour BBG)
-   *   qrsNotch   : 'M' pour BBG latéral, 'QS' pour BBG V1
-   *   qtProlong  : facteur d'allongement du QT (ex: 1.6 pour QT long)
-   * ========================================================================== */
+ 
   function generateBeat(lead, hr, leadConfig) {
     leadConfig = leadConfig || {};
     var leadIdx = LEADS.indexOf(lead);
@@ -399,27 +368,22 @@
     var hrInterval = 60 / Math.max(1, hr);
     var qrsInterval = leadConfig.qrsWidth || 0.08;
 
-    // PR varie avec la FC (comme dans II)
     var prFrac = Math.min(1, Math.max(0, (hr - 60) / (160 - 60)));
     var pr = 0.16 + (0.20 - 0.16) * prFrac;
 
-    // QT = 3.3 × QRS, borné ; ST = tiers, T = deux tiers
     var qt = Math.min(1, Math.max(0.1, 3.3 * qrsInterval)) * (leadConfig.qtProlong || 1.0);
     var stInterval = Math.max(0.02, qt - qrsInterval);
     var stSegment = stInterval * (1/3);
     var tInterval = stInterval * (2/3);
 
-    // ST et T elevation (additifs, comme p.ST_Elevation et p.T_Elevation dans II)
     var stElev = (leadConfig.stElev || 0) - (leadConfig.stDep || 0);
     var tElev = leadConfig.tElev || 0;
 
-    // Amplitude de l'onde T
     var tAmp = 0.2 * coeff[WP.T] * (leadConfig.tFactor != null ? leadConfig.tFactor : 1.0);
     if (leadConfig.tInvert) tAmp = -Math.abs(tAmp);
     // Pour les dérivations où T est normalement négatif (V1, aVR), tInvert l'inverse
     if (leadConfig.tInvert && coeff[WP.T] < 0) tAmp = Math.abs(0.2 * coeff[WP.T] * (leadConfig.tFactor || 1.0));
 
-    // Onde P (aplatie si hyperkaliémie)
     var pAmp = 0.1 * coeff[WP.P] * (leadConfig.pFlat ? 0.15 : 1.0);
 
     var beat = [];
@@ -430,36 +394,28 @@
       if (pts.length > 0) cursor = {t: cursor.t + pts[pts.length-1].t, mv: pts[pts.length-1].mv};
     }
 
-    // Onde P
     append(peak((pr*2)/3, pAmp, 0, cursor.mv));
-    // Segment PR (additif : coeff[PR])
     append(line(pr/3, 0 + coeff[WP.PR], cursor.mv));
 
-    // QRS
     if (leadConfig.qrsNotch === 'M') {
-      // BBG latéral : encoche en M
       append(line(qrsInterval * 0.20, 0.3, cursor.mv));
       append(line(qrsInterval * 0.15, 0.15, cursor.mv));
       append(line(qrsInterval * 0.30, 0.7, cursor.mv));
       append(line(qrsInterval * 0.20, 0.5, cursor.mv));
       append(line(qrsInterval * 0.15, 0.0, cursor.mv));
     } else if (leadConfig.qrsNotch === 'QS') {
-      // BBG V1 : QS profond et large
       append(line(qrsInterval * 0.40, -0.6, cursor.mv));
       append(line(qrsInterval * 0.35, -0.3, cursor.mv));
       append(line(qrsInterval * 0.25, 0.0, cursor.mv));
     } else {
-      // QRS normal — utilise les multiplicateurs de baseLeadCoeff
       append(line(qrsInterval/4, -0.05 * coeff[WP.Q], cursor.mv));
       append(line(qrsInterval/4, 0.9 * coeff[WP.R], cursor.mv));
       append(line(qrsInterval/4, -0.3 * coeff[WP.S], cursor.mv));
       append(line(qrsInterval/4, -0.1 * coeff[WP.J], cursor.mv));
     }
 
-    // Segment ST — additif : coeff[ST] + stElev (comme p.ST_Elevation dans II)
     append(line(stSegment, 0 + coeff[WP.ST] + stElev, cursor.mv));
 
-    // Onde T — additive : coeff[T] × 0.2 + tElev (comme p.T_Elevation dans II)
     if (leadConfig.tBiphasic) {
       var halfT = tInterval / 2;
       var biphasicAmp = Math.abs(tAmp);
@@ -472,7 +428,6 @@
       append(peak(tInterval, stElev + tAmp + tElev, stElev, cursor.mv));
     }
 
-    // Segment TP (additif : coeff[TP])
     var tpLen = Math.max(0, hrInterval - cursor.t);
     append(line(tpLen, 0 + coeff[WP.TP], cursor.mv));
 
@@ -480,7 +435,6 @@
     return beat;
   }
 
-  /* Interpolation de la valeur mv au temps t */
   function getMvAtTime(beat, t) {
     if (!beat || beat.length === 0) return 0;
     var hrInterval = beat[beat.length-1].t;
@@ -501,7 +455,7 @@
    * Générateurs spécialisés pour rythmes complexes
    * ========================================================================== */
 
-  // Fibrillation ventriculaire : tracé chaotique
+  // Fibrillation ventriculaire 
   function generateVFib() {
     var beat = [];
     var duration = 4.0;
@@ -520,7 +474,7 @@
     return beat;
   }
 
-  // Tachycardie ventriculaire : QRS larges et réguliers
+  // Tachycardie ventriculaire 
   function generateVTach(hr) {
     hr = hr || 180;
     var beat = [];
@@ -549,23 +503,17 @@
     return beat;
   }
 
-  // Torsades de Pointes : tachycardie ventriculaire polymorphe très rapide
-  // (250-300 bpm) avec amplitude qui tourne autour de la ligne de base.
-  // Les QRS sont larges et se succèdent rapidement sans segment isoelectrique
-  // net, créant l'effet « ruban twist » caractéristique.
+  // Torsades de Pointes 
   function generateTorsades() {
     var beat = [];
-    var hr = 280;                    // 280 bpm = très rapide
-    var hrInterval = 60 / hr;        // ~0.214s par cycle
-    var qrsWidth = hrInterval * 0.85; // QRS occupe 85% du cycle (presque pas de base)
+    var hr = 280;                    
+    var hrInterval = 60 / hr;
+    var qrsWidth = hrInterval * 0.85;
     var totalDuration = 4.0;
     var t = 0;
-    // L'enveloppe tourne lentement pour créer l'effet de torsion
-    // Période d'enveloppe ~2.5s pour plusieurs cycles de torsion sur 4s
     var envelopePeriod = 2.5;
     while (t < totalDuration) {
       var envelope = Math.sin((t / envelopePeriod) * 2 * Math.PI) * 0.85;
-      // Chaque QRS est une sinusoïde d'une demi-période
       for (var dt = 0; dt < qrsWidth; dt += 0.003) {
         var frac = dt / qrsWidth;
         var mv = Math.sin(frac * Math.PI) * envelope;
@@ -573,7 +521,6 @@
         beat.push({t:t+dt, mv:mv});
       }
       t += qrsWidth;
-      // Très court segment de base (15% du cycle)
       var baseLen = hrInterval - qrsWidth;
       for (var dt = 0; dt < baseLen; dt += 0.003) {
         beat.push({t:t+dt, mv:(Math.random()-0.5)*0.02});
@@ -583,7 +530,7 @@
     return beat;
   }
 
-  // FA pré-excitée (WPW) : irrégulière, QRS larges avec ondes delta
+  // FA pré-excitée (WPW) 
   function generatePreexcitedAFib() {
     var beat = [];
     var totalDuration = 4.0;
@@ -608,7 +555,7 @@
     return beat;
   }
 
-  // Bloc AV : Mobitz II (QRS tombé) ou 3e degré (P et QRS indépendants)
+  // Bloc AV : Mobitz II  ou 3e degré 
   function generateAVBlock(lead, hr, degree) {
     var coeff = baseLeadCoeff[lead];
     var beat = [];
@@ -684,11 +631,6 @@
 
   /* ============================================================================
    * Catalogue des 18 anomalies
-   * -------------------------------------------------------------------------
-   * Chaque anomalie définit :
-   *   id, name, shortName, category, description, hr
-   *   leads : objet { leadId: leadConfig } — config passée à generateBeat
-   *   generator : fonction (lead) → beat (pour rythmes complexes)
    * ========================================================================== */
   var ANOMALIES = [
     {
@@ -944,7 +886,7 @@
   }
 
   /* ============================================================================
-   * Afficheurs ECG (12 instances)
+   * Afficheurs ECG 
    * ========================================================================== */
   var VISIBLE_SECONDS = 4;
   var SWEEP_MM_PER_S = 25;
@@ -956,7 +898,7 @@
     paused: false,
     currentAnomaly: null,
     answered: false,
-    recentAnomalies: []  // hidden — garde-mémoire des 5 dernières anomalies pour éviter les répétitions consécutives
+    recentAnomalies: []  
   };
 
   function createDisplay(canvas, leadId) {
@@ -986,9 +928,6 @@
     d.ctx.scale(dpr, dpr);
 
     var pixelsPerMm = cssW / (VISIBLE_SECONDS * SWEEP_MM_PER_S);
-    // Gain élevé (25 mm/mV) pour que les changements ST (0.15-0.35 mV) soient
-    // clairement visibles dans des rangées de ~60px. maxAmpMv = 1.0 cappe les
-    // rythmes chaotiques (les générateurs spécialisés sont scaled pour <1.0 mV).
     var maxAmpMv = 1.0;
     var maxPixelsPerMv = Math.max(20, (cssH / 2 - 4) / maxAmpMv);
     var pixelsPerMv = Math.min(pixelsPerMm * 25, maxPixelsPerMv);
@@ -1154,10 +1093,6 @@
     return a;
   }
 
-  // Pick a random anomaly, excluding the last 5 shown (hidden from user).
-  // This prevents consecutive repetition while keeping selection random.
-  // If all 18 anomalies are in the recent list (impossible with 5-deep memory
-  // but defensive), fall back to pure random.
   function pickRandomAnomaly() {
     var available = ANOMALIES.filter(function (a) {
       return state.recentAnomalies.indexOf(a.id) === -1;
@@ -1285,9 +1220,7 @@
     }
   });
 
-  /* ============================================================================
-   * Init
-   * ========================================================================== */
+
   buildECGPanel();
   displays.forEach(setupDisplay);
   loadAnomaly(pickRandomAnomaly());
