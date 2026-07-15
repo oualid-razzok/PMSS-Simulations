@@ -4,7 +4,7 @@
 
 Bienvenue sur le dépôt officiel de PMSS. Nous proposons des applications web de simulation en santé gratuites, légères et entièrement hors ligne, conçues pour démocratiser l'enseignement médical. Ce projet a débuté dans le cadre d'un module de doctorat intitulé « innovation pédagogique », mais nous avons pensé qu'il serait utile de partager ces applications avec le monde entier.
 
-## 🌟 Notre philosophie
+## Notre philosophie
 
 La simulation haute fidélité ne devrait pas nécessiter un budget important ni un accès constant à Internet. Chaque application de ce dépôt est :
 
@@ -13,7 +13,7 @@ La simulation haute fidélité ne devrait pas nécessiter un budget important ni
 - **Universelle :** Fonctionne sur tout appareil doté d'un navigateur moderne — PC, tablette, smartphone.
 - **Gratuite :** Sous licence CC BY 4.0, y compris pour un usage commercial (avec attribution).
 
-## 📱 Simulations disponibles
+## Simulations disponibles
 
 | Nom de l'application | Description | Lien |
 | :--- | :--- | :--- |
@@ -33,7 +33,7 @@ La simulation haute fidélité ne devrait pas nécessiter un budget important ni
 - **Version animée** (`axe-cardiaque.html`) : les tracés ECG défilent de droite à gauche en continu, comme sur un moniteur de chevet. La trace se met à jour progressivement à mesure que les nouveaux échantillons remplacent les anciens.
 - **Version statique** (`axe-cardiaque-statique.html`) : trois battements fixes sont affichés par dérivation. Les tracés ne défilent pas — ils sont entièrement redessinés à chaque changement d'axe. Cette version économise la batterie sur mobile et facilite la comparaison visuelle des morphologies.
 
-## 💻 Utilisation hors ligne
+## Utilisation hors ligne
 
 1. Ouvrez le fichier que vous souhaitez utiliser (par exemple, `normal-ecg-simulateur.html`).
 2. Cliquez sur le bouton **« Raw »** ou faites un clic droit et sélectionnez **« Enregistrer la cible sous... »** pour télécharger le fichier `.html` sur votre ordinateur.
@@ -43,7 +43,7 @@ La simulation haute fidélité ne devrait pas nécessiter un budget important ni
 
 Vous avez une demande pour une machine médicale spécifique ou un scénario clinique ? Ouvrez une *issue* GitHub et faites-le nous savoir !
 
-## 📝 Citation et usage académique
+## Citation et usage académique
 
 Ces outils sont sous licence CC BY 4.0, qui autorise l'usage non commercial et commercial, l'adaptation et la redistribution — à condition de fournir une attribution appropriée.
 
@@ -55,14 +55,14 @@ Veuillez nous citer comme suit :
 
 *Vous pouvez également utiliser le bouton « Cite this repository » dans la barre latérale droite de la page GitHub pour générer une citation BibTeX ou APA.*
 
-## 📜 Licence
+## Licence
 
 [![License: CC BY 4.0](https://img.shields.io/badge/License-CC_BY_4.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
 
 Ce projet est sous licence **Creative Commons Attribution 4.0 International (CC BY 4.0)**.
 
-- ✅ Vous pouvez **partager** et **adapter** le matériel pour **tout usage, y compris commercial**.
-- ✅ Vous pouvez distribuer les œuvres dérivées sous n'importe quelle licence.
-- ⚠️ Vous **devez** accorder un crédit approprié, fournir un lien vers la licence et indiquer si des modifications ont été effectuées.
+-  Vous pouvez **partager** et **adapter** le matériel pour **tout usage, y compris commercial**.
+-  Vous pouvez distribuer les œuvres dérivées sous n'importe quelle licence.
+- Vous **devez** accorder un crédit approprié, fournir un lien vers la licence et indiquer si des modifications ont été effectuées.
 
 Consultez le fichier [LICENCE](LICENCE) pour le texte complet de la licence, ou lisez le [résumé en langue courante](https://creativecommons.org/licenses/by/4.0/).
