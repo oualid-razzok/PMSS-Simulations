@@ -8,7 +8,6 @@
   /* ===== Reset & base ===== */
   * { box-sizing: border-box; margin: 0; padding: 0; }
   
-  /* Force html, body, main, and widget to take 100% of the available space (iframe/screen) */
   html, body, main, .ecg-widget {
     width: 100%;
     height: 100%;
@@ -29,10 +28,9 @@
   
   main {
     display: flex;
-    flex: 1; /* Makes main expand to fill body */
+    flex: 1;
   }
 
-  /* ===== Widget ECG : s'adapte à la taille de l'écran/iframe ===== */
   .ecg-widget {
     display: flex;
     flex-direction: column;
@@ -87,9 +85,9 @@
   /* ===== Zone du canvas ===== */
   .ecg-canvas-wrap {
     position: relative;
-    flex: 1; /* Takes all remaining vertical space */
+    flex: 1; 
     overflow: hidden;
-    min-height: 0; /* Prevents flexbox from overflowing */
+    min-height: 0; 
   }
   .ecg-canvas-wrap canvas {
     display: block;
@@ -301,32 +299,16 @@
   </main>
 
 <script>
-/* ============================================================================
- * Simulateur ECG — fichier autonome
- *
- * Bibliothèque de génération ECG portée depuis Infirmary Integrated
- * (tanjera/infirmary-integrated) par Ibi Keller.
- * Référence : II Library/Classes/Waveform.Draw.cs, Waveform.Plotting.cs, Rhythms.cs
- *
- * La forme d'onde par défaut est générée à partir de DII ; les autres
- * dérivations sont obtenues en multipliant chaque partie d'onde par les
- * coefficients par dérivation (baseLeadCoeff).
- * ========================================================================== */
+
 
 (function () {
   'use strict';
-
-  // ===== Définitions des dérivations =====
   var LEADS = ['I', 'II', 'III', 'aVR', 'aVL', 'aVF', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6'];
-
-  // Étiquettes françaises (DI, DII, DIII pour les dérivations périphériques)
   var LEAD_LABEL = {
     I: 'DI', II: 'DII', III: 'DIII',
     aVR: 'aVR', aVL: 'aVL', aVF: 'aVF',
     V1: 'V1', V2: 'V2', V3: 'V3', V4: 'V4', V5: 'V5', V6: 'V6'
   };
-
-  // Description clinique courte en français pour chaque dérivation
   var LEAD_DESC = {
     I:   'Latéral — FG vs FD',
     II:  'Inférieur — FL vs FD',
@@ -342,12 +324,7 @@
     V6:  'Latéral — précordielle gauche'
   };
 
-  // Index des colonnes pour baseLeadCoeff — correspond à l'enum WavePart
   var WP = { QRST:0, P:1, Q:2, R:3, S:4, J:5, T:6, PR:7, ST:8, TP:9 };
-
-  /* Coefficients pour transformer la dérivation de base (DII) en ECG 12 dérivations.
-   * P à T sont des multiplicateurs ; PR/ST/TP sont des additions.
-   * Lignes : I, II, III, aVR, aVL, aVF, V1..V6 */
   var baseLeadCoeff = [
     // QRST  P     Q     R     S     J     T     PR  ST   TP
     [0.7,   0.7,  0.7,  0.7,  0.7,  0.7,  0.8,  0,   0,   0],   // I
@@ -364,9 +341,6 @@
     [-0.1,  1.0, -9.0, -0.1,  0.0,  0.0,  0.8,  0,   0,   0]    // V6
   ];
 
-  // ===== Fonctions de tracé (portées de Waveform.Plotting.cs) =====
-
-  // Interpolation Bézier quadratique entre deux points via un point de contrôle
   function bezier(p0, p1, p2, pct) {
     var inv = 1 - pct;
     return {
@@ -374,9 +348,6 @@
       mv: p0.mv * inv * inv + 2 * p1.mv * pct * inv + p2.mv * pct * pct
     };
   }
-
-  /* Plotting.Peak — bosse lissée (Bézier) de startMv jusqu'au sommet mv puis retour à mvEnd.
-   * Retourne des valeurs mv absolues sur [0, length]. */
   function peak(length, mv, mvEnd, startMv) {
     if (length <= 0) return [];
     var out = [];
@@ -407,8 +378,6 @@
     return out;
   }
 
-  /* Plotting.Line — interpolation linéaire de startMv vers mv sur length secondes.
-   * Retourne des valeurs mv absolues sur (0, length]. */
   function line(length, mv, startMv) {
     if (length <= 0) return [];
     var out = [];
@@ -421,8 +390,6 @@
     return out;
   }
 
-  /* Génère un battement cardiaque complet (un intervalle RR) pour la dérivation demandée.
-   * Reproduit le battement en rythme sinusal de la référence (P_Normal + QRST_Normal). */
   function generateBeat(lead, hr, qrsInterval) {
     hr = hr || 80;
     qrsInterval = qrsInterval || 0.08;
@@ -487,13 +454,11 @@
     return beat;
   }
 
-  /* Interpole linéairement la valeur mv au temps absolu t à partir du battement courant. */
   function getMvAtTime(beat, t) {
     if (beat.length === 0) return 0;
     var hrInterval = beat[beat.length - 1].t;
     if (hrInterval <= 0) return 0;
 
-    // Ramène t dans [0, hrInterval)
     var tInBeat = t % hrInterval;
     if (tInBeat < 0) tInBeat += hrInterval;
 
@@ -512,10 +477,10 @@
    * Composant d'affichage ECG sur canvas
    * ========================================================================== */
 
-  // Constantes d'affichage — conventions cliniques
-  var VISIBLE_SECONDS = 5;   // fenêtre affichée sur toute la largeur du canvas
-  var SWEEP_MM_PER_S = 25;   // vitesse de défilement standard
-  var GAIN_MM_PER_MV = 10;   // gain standard
+  // Constantes d'affichage
+  var VISIBLE_SECONDS = 5;   
+  var SWEEP_MM_PER_S = 25;   
+  var GAIN_MM_PER_MV = 10;   
 
   // État
   var canvas = document.getElementById('ecg-canvas');
@@ -523,15 +488,15 @@
   var wrap = document.getElementById('canvas-wrap');
 
   var state = {
-    lead: 'II',          // dérivation par défaut : DII
+    lead: 'II',          
     hr: 80,
     qrsInterval: 0.08,
-    beat: [],            // forme d'onde précalculée
+    beat: [],            
     samples: new Float32Array(0),
-    playhead: 0,         // position courante de balayage en pixels
-    currentTime: 0,      // temps de lecture accumulé en secondes
-    lastFrameTime: 0,    // timestamp de la frame précédente
-    paused: false,       // pause du balayage (le tracé reste figé mais visible)
+    playhead: 0,         
+    currentTime: 0,      
+    lastFrameTime: 0,    
+    paused: false,       
     dims: {
       width: 0, height: 0,
       pixelsPerMm: 4,
@@ -541,7 +506,7 @@
     }
   };
 
-  // Configure le canvas pour la taille CSS actuelle (gère le DPR)
+  // Configure le canvas pour la taille CSS actuelle
   function setupCanvas() {
     var rect = wrap.getBoundingClientRect();
     var cssW = Math.max(1, Math.floor(rect.width));
@@ -554,9 +519,6 @@
     canvas.style.width = cssW + 'px';
     canvas.style.height = cssH + 'px';
     ctx.scale(dpr, dpr);
-
-    // pixelsPerMm : on veut que VISIBLE_SECONDS × SWEEP_MM_PER_S mm
-    // d'ECG remplissent exactement la largeur du canvas
     var pixelsPerMm = cssW / (VISIBLE_SECONDS * SWEEP_MM_PER_S);
     state.dims = {
       width: cssW,
@@ -579,7 +541,7 @@
     var d = state.dims;
     var w = d.width, h = d.height, pxmm = d.pixelsPerMm;
 
-    // Petits carreaux (1 mm) — rose très clair
+    // Petits carreaux (1 mm) rose très clair
     ctx.strokeStyle = '#ffc7d4';
     ctx.lineWidth = 0.5;
     ctx.beginPath();
@@ -593,7 +555,7 @@
     }
     ctx.stroke();
 
-    // Grands carreaux (5 mm) — rose un peu plus soutenu
+    // Grands carreaux (5 mm) rose un peu plus soutenu
     ctx.strokeStyle = '#f78da3';
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -614,13 +576,13 @@
     var d = state.dims;
     var w = d.width, h = d.height, pxmv = d.pixelsPerMv, cy = d.centerY;
 
-    // Fond — rose crème doux (comme le papier ECG)
+    // Fond — rose crème doux
     ctx.fillStyle = '#fff8fa';
     ctx.fillRect(0, 0, w, h);
 
     drawGrid();
 
-    // Trace — encre profonde (noir légèrement chaud)
+    // Trace — encre profonde 
     ctx.strokeStyle = '#0a0a0a';
     ctx.lineWidth = 1.4;
     ctx.lineJoin = 'round';
@@ -630,9 +592,6 @@
     var samples = state.samples;
     var n = samples.length;
     if (n > 0) {
-      // Parcourt du plus ancien (à l'index playhead, prochain emplacement à écraser)
-      // vers le plus récent (à playhead-1). Le plus ancien est en x=0 (bord gauche),
-      // le plus récent en x=n-1 (bord droit) : la trace défile vers la gauche.
       var playhead = Math.floor(state.playhead) % n;
       for (var i = 0; i < n; i++) {
         var idx = (playhead + i) % n;
@@ -642,8 +601,6 @@
         else ctx.lineTo(i, y);
       }
       ctx.stroke();
-
-      // Point de tête au bord droit — met en valeur l'échantillon le plus récent
       var newestIdx = (playhead - 1 + n) % n;
       var newestMv = samples[newestIdx];
       var newestY = cy - newestMv * pxmv;
@@ -654,21 +611,14 @@
     }
   }
 
-  // Boucle d'animation : avance la lecture, écrit les nouveaux échantillons, rend
   function frame(now) {
     if (state.lastFrameTime === 0) state.lastFrameTime = now;
     var dt = Math.min(0.1, (now - state.lastFrameTime) / 1000);
     state.lastFrameTime = now;
-
-    // Si en pause : on ne avance ni le playhead ni le currentTime.
-    // On continue quand même de faire un render() pour garder le point de tête
-    // et la grille affichés (et pour reprendre instantanément à la désactivation
-    // de la pause).
     if (!state.paused) {
       var samples = state.samples;
       var n = samples.length;
       var pps = state.dims.pixelsPerSecond;
-
       if (n > 0 && pps > 0) {
         var newPixels = dt * pps;
         var numSteps = Math.max(1, Math.ceil(newPixels));
@@ -691,7 +641,7 @@
   }
 
   /* ============================================================================
-   * Interface utilisateur — sélecteur de dérivations + curseur FC
+   * Interface utilisateur, sélecteur de dérivations + curseur FC
    * ========================================================================== */
 
   // Génère les boutons de dérivations
@@ -710,21 +660,9 @@
     });
   }
 
-  // Change la dérivation active et met à jour l'interface + la forme d'onde.
-  //
-  // IMPORTANT : on NE réinitialise PAS le tampon d'échantillons ni la position
-  // de lecture. La nouvelle forme d'onde remplace progressivement l'ancienne à
-  // mesure que le balayage continue — la trace existante défile vers la gauche
-  // et la nouvelle morphologie apparaît depuis le bord droit, sans coupure
-  // visuelle. Avant ce fixe, le tampon était effacé (state.samples.fill(0)) et
-  // le playhead remis à 0, ce qui faisait disparaître tout le tracé et
-  // revenait visuellement à un « redémarrage ».
   function selectLead(lead) {
     state.lead = lead;
     state.beat = generateBeat(lead, state.hr, state.qrsInterval);
-    // Pas de réinitialisation du tampon ni du playhead — transition fluide.
-
-    // Met à jour les boutons
     var buttons = document.querySelectorAll('.lead-btn');
     buttons.forEach(function (b) {
       var isActive = b.textContent === LEAD_LABEL[lead];
@@ -738,11 +676,9 @@
   }
 
   // Change la FC et régénère le battement.
-  // Même logique que selectLead : on garde la continuité du balayage.
   function selectHr(hr) {
     state.hr = hr;
     state.beat = generateBeat(state.lead, hr, state.qrsInterval);
-    // Pas de réinitialisation du tampon ni du playhead — transition fluide.
 
     document.getElementById('hr-value').textContent = hr;
     document.getElementById('hr-slider-value').textContent = hr;
@@ -757,10 +693,6 @@
   });
 
   // ===== Bouton Pause =====
-  // Bascule l'état de pause : quand paused = true, la boucle d'animation
-  // continue de tourner (pour rester réactif) mais n'avance plus le playhead
-  // ni le currentTime — le tracé reste figé pour permettre la lecture et le
-  // calcul du rythme. Le bouton change d'icône (⏸ → ▶) et de style.
   var pauseBtn = document.getElementById('pause-btn');
   function togglePause() {
     state.paused = !state.paused;
@@ -774,16 +706,10 @@
       pauseBtn.classList.remove('paused');
       pauseBtn.setAttribute('aria-pressed', 'false');
       pauseBtn.setAttribute('aria-label', 'Mettre en pause le balayage de la trace');
-      // Réinitialise lastFrameTime pour éviter un saut quand on reprend
-      // (dt serait sinon égal au temps de pause, ce qui ferait avancer le
-      // playhead d'un coup).
       state.lastFrameTime = 0;
     }
   }
   pauseBtn.addEventListener('click', togglePause);
-
-  // Raccourci clavier : Espace pour pause/reprise
-  // (sauf si le focus est sur un input/slider pour ne pas interférer)
   document.addEventListener('keydown', function (e) {
     if (e.key === ' ' || e.key === 'Spacebar') {
       var tag = (e.target.tagName || '').toLowerCase();
@@ -792,19 +718,14 @@
       togglePause();
     }
   });
-
   state.beat = generateBeat(state.lead, state.hr, state.qrsInterval);
   setupCanvas();
-
-  // Observe les redimensionnements du conteneur
   if (window.ResizeObserver) {
     var ro = new ResizeObserver(function () { setupCanvas(); });
     ro.observe(wrap);
   } else {
     window.addEventListener('resize', setupCanvas);
   }
-
-  // Démarre la boucle d'animation
   requestAnimationFrame(frame);
 })();
 </script>
