@@ -124,7 +124,6 @@
     width: 44px;
     height: 44px;
     border-radius: 50%;
-    /* color & text-color set by per-electrode modifier class below */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -138,14 +137,10 @@
     box-shadow: 0 1px 3px rgba(0,0,0,0.25);
     border: 1px solid rgba(0,0,0,0.15);
   }
-  /* ===== Couleurs IEC 60601-2-51 ===== */
-  /* Dériverations périphériques : RA=rouge, LA=jaune, RL=noir, LL=vert */
   .electrode.color-RA  { background: #dc2626; color: #ffffff; }
   .electrode.color-LA  { background: #facc15; color: #1a1a1a; }
   .electrode.color-RL  { background: #1a1a1a; color: #ffffff; }
   .electrode.color-LL  { background: #16a34a; color: #ffffff; }
-  /* Dériverations précordiales : V1=rouge, V2=jaune, V3=vert, V4=brun,
-     V5=orange, V6=violet */
   .electrode.color-V1  { background: #dc2626; color: #ffffff; }
   .electrode.color-V2  { background: #facc15; color: #1a1a1a; }
   .electrode.color-V3  { background: #16a34a; color: #ffffff; }
@@ -183,7 +178,6 @@
     box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.25);
   }
 
-  /* ===== Zone image ===== */
   .image-zone {
     position: relative;
     display: flex;
@@ -206,7 +200,6 @@
   }
   .image-wrapper {
     position: relative;
-    /* dimensions définies par JS pour préserver l'aspect ratio */
   }
   .image-wrapper img {
     display: block;
@@ -231,7 +224,6 @@
     margin-top: 1px;
   }
 
-  /* ===== Drop zones (invisibles) ===== */
   .drop-zone {
     position: absolute;
     width: 1px;
@@ -239,8 +231,6 @@
     transform: translate(-50%, -50%);
     pointer-events: none;
   }
-  /* Surlignage d'une zone pendant le mode placement clavier : cercle
-     pointillé qui indique la zone actuellement sélectionnée. */
   .drop-zone.kbd-highlight {
     width: 36px;
     height: 36px;
@@ -249,13 +239,11 @@
     background: rgba(26, 26, 26, 0.08);
     z-index: 5;
   }
-  /* Accessibilité clavier : anneau de focus visible uniquement au clavier */
   .electrode:focus-visible {
     outline: 3px solid #1a1a1a;
     outline-offset: 2px;
   }
 
-  /* ===== Footer ===== */
   .app-footer {
     padding: 12px 16px;
     border-top: 1px solid #e5e5e5;
@@ -334,7 +322,7 @@
           </div>
         </div>
         <div class="image-label">
-          Corps entier — vue de face
+          Corps entier vue de face
           <div class="secondary">Côté droit du patient à gauche de l'image</div>
         </div>
       </div>
@@ -346,7 +334,7 @@
           </div>
         </div>
         <div class="image-label">
-          Thorax — vue antérieure
+          Thorax vue face
           <div class="secondary">Côté droit du patient à gauche de l'image</div>
         </div>
       </div>
@@ -373,28 +361,6 @@
 <script>
 (function () {
   'use strict';
-
-  /* ==========================================================================
-   * Configuration des zones de dépôt (positions en % de l'image)
-   * ==========================================================================
-   * Corps (563x730, vue antérieure) :
-   *   Le patient fait face au spectateur → son côté droit est à gauche de l'image.
-   *   RA = poignet droit (gauche de l'image)
-   *   LA = poignet gauche (droite de l'image)
-   *   RL = cheville droite (gauche de l'image, pieds serrés)
-   *   LL = cheville gauche (droite de l'image, pieds serrés)
-   *
-   * Thorax (871x747, vue antérieure) :
-   *   Le patient fait face au spectateur → son côté droit est à gauche de l'image.
-   *   Sternum au centre (X≈50%).
-   *   V1 = bord sternal droit (X≈45%, gauche de l'image, 4e EIC)
-   *   V2 = bord sternal gauche (X≈55%, droite de l'image, 4e EIC)
-   *   V3 = entre V2 et V4 (X≈62%, 5e EIC)
-   *   V4 = ligne médio-claviculaire gauche (X≈68%, 5e EIC)
-   *   V5 = ligne axillaire antérieure gauche (X≈78%, 5e EIC)
-   *   V6 = ligne axillaire moyenne gauche (X≈88%, 5e EIC, bord droit)
-   * ======================================================================== */
-
   var BODY_ZONES = [
     { id: 'z-RA', expected: 'RA', x: 19, y: 50 },
     { id: 'z-LA', expected: 'LA', x: 81, y: 50 },
@@ -411,12 +377,10 @@
     { id: 'z-V6', expected: 'V6', x: 81, y: 51 }
   ];
 
-  // Distance maximale (en px) pour qu'un drop soit accepté.
-  // Grand valeur → tolérance à l'imprécision de la souris/doigt.
   var MAX_DROP_DISTANCE_PX = 220;
 
   /* ==========================================================================
-   * Domaine de chaque électrode ('body' ou 'thorax')
+   * Domaine de chaque électrode 
    * ======================================================================== */
   var ELECTRODE_DOMAIN = {
     RA: 'body', LA: 'body', RL: 'body', LL: 'body',
@@ -436,7 +400,7 @@
   };
 
   /* ==========================================================================
-   * Dimensionnement des wrappers d'image (préserve l'aspect ratio)
+   * Dimensionnement des wrappers d'image 
    * ======================================================================== */
   function updateImageWrappers() {
     var frames = document.querySelectorAll('.image-frame');
@@ -463,7 +427,7 @@
   }
 
   /* ==========================================================================
-   * Construction des zones de dépôt (invisibles)
+   * Construction des zones de dépôt
    * ======================================================================== */
   function createZones() {
     var bodyWrapper = document.getElementById('body-wrapper');
@@ -516,10 +480,6 @@
         domain: ELECTRODE_DOMAIN[id]
       };
       state.placements[id] = null;
-      // Accessibilité clavier : l'électrode est focalisable.
-      // Tab navigue entre les électrodes, Entrée démarre le mode placement
-      // clavier (les zones libres du même domaine sont surlignées, les flèches
-      // permettent de choisir, Entrée confirme, Échap annule).
       el.setAttribute('tabindex', '0');
       el.setAttribute('role', 'button');
       el.setAttribute('aria-label',
@@ -530,7 +490,7 @@
   }
 
   /* ==========================================================================
-   * Drag-and-drop (pointer events — fonctionne souris + tactile)
+   * Drag-and-drop 
    * ======================================================================== */
   function onPointerDown(e) {
     var el = e.currentTarget;
@@ -551,7 +511,6 @@
     var offsetX = e.clientX - centerX;
     var offsetY = e.clientY - centerY;
 
-    // Détacher l'électrode : passer en position fixed, enfant de body
     el.classList.remove('placed', 'correct', 'wrong');
     el.classList.add('dragging');
     el.style.position = 'fixed';
@@ -617,7 +576,6 @@
       return null;
     }
 
-    // Trouver la zone libre la plus proche dans le même domaine
     var bestZone = null;
     var bestDist = Infinity;
     Object.keys(state.zones).forEach(function (zoneId) {
@@ -670,16 +628,7 @@
     state.placements[electrodeId] = null;
   }
 
-  /* ==========================================================================
-   * Placement au clavier (accessibilité)
-   * -------------------------------------------------------------------------
-   * Contrairement à etiqueteur-ondes (placement libre en px), les zones de
-   * dépôt ici sont discrètes (10 zones fixes). Le pattern clavier est donc :
-   * Tab focalise une électrode → Entrée démarre le mode placement → les zones
-   * libres du même domaine sont surlignées → flèches Gauche/Droite (ou Haut/
-   * Bas) cyclent d'une zone à l'autre → Entrée pose sur la zone surlignée →
-   * Échap annule (retour au bac ou à la position précédente).
-   * ========================================================================== */
+ 
 
   var kbdPlaceState = null;  // { id, prevZoneId, domain, freeZones, idx }
 
@@ -691,7 +640,6 @@
       if (state.zoneOccupancy[zoneId] !== null) return;
       result.push(zoneId);
     });
-    // Trier par position (y puis x) pour un parcours naturel haut→bas, gauche→droite
     result.sort(function (a, b) {
       var za = state.zones[a];
       var zb = state.zones[b];
@@ -713,7 +661,6 @@
 
   function makeElectrodeKeydownHandler(id) {
     return function (e) {
-      // Si on n'est pas en mode placement pour cette électrode
       if (!kbdPlaceState || kbdPlaceState.id !== id) {
         if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
           e.preventDefault();
@@ -722,7 +669,6 @@
         return;
       }
 
-      // Mode placement actif
       switch (e.key) {
         case 'ArrowRight':
         case 'ArrowDown':
@@ -754,20 +700,16 @@
     var info = state.electrodes[id];
     var domain = info.domain;
 
-    // Mémoriser la position précédente pour pouvoir annuler
     var prevPlacement = state.placements[id];
     var prevZoneId = prevPlacement ? prevPlacement.zoneId : null;
 
-    // Libérer la zone actuelle si l'électrode était placée
     if (prevPlacement) {
       state.zoneOccupancy[prevPlacement.zoneId] = null;
       state.placements[id] = null;
     }
 
-    // Lister les zones libres du même domaine
     var freeZones = getFreeZonesForDomain(domain);
     if (freeZones.length === 0) {
-      // Aucune zone libre : retourner au bac et informer l'utilisateur
       returnToTray(id);
       var el = info.element;
       el.setAttribute('aria-label', 'Électrode ' + id + ' — aucune zone libre dans le domaine ' + domain + '.');
@@ -775,7 +717,6 @@
       return;
     }
 
-    // Si l'électrode était placée, démarrer sur sa zone précédente (si libre)
     var startIdx = 0;
     if (prevZoneId && freeZones.indexOf(prevZoneId) !== -1) {
       startIdx = freeZones.indexOf(prevZoneId);
@@ -789,10 +730,8 @@
       idx: startIdx
     };
 
-    // Surligner la première zone
     highlightKbdZone(freeZones[startIdx]);
 
-    // Mettre l'électrode en état « dragging » visuel pour indiquer qu'elle est active
     var el = info.element;
     el.classList.remove('placed', 'correct', 'wrong');
     el.classList.add('dragging');
@@ -829,7 +768,6 @@
     el.setAttribute('aria-label',
       'Électrode ' + id + ' — Entrée pour la saisir, puis flèches pour choisir une zone, Entrée pour poser, Échap pour annuler');
     if (prevZoneId) {
-      // Restaurer la position précédente
       placeElectrode(id, prevZoneId);
     } else {
       returnToTray(id);
@@ -849,7 +787,6 @@
       el.classList.remove('correct', 'wrong');
       var placement = state.placements[id];
       if (!placement) {
-        // Non placée → comptée comme fausse
         el.classList.add('wrong');
         return;
       }
@@ -882,7 +819,6 @@
   }
 
   function reset() {
-    // Annuler tout placement clavier en cours
     kbdPlaceState = null;
     highlightKbdZone(null);
     Object.keys(state.electrodes).forEach(function (id) {
@@ -905,7 +841,6 @@
   document.getElementById('check-btn').addEventListener('click', check);
   document.getElementById('reset-btn').addEventListener('click', reset);
 
-  // Une fois les images chargées, dimensionner les wrappers
   var imgs = document.querySelectorAll('.image-wrapper img');
   var loaded = 0;
   function onImgLoad() {
@@ -921,8 +856,6 @@
       img.addEventListener('load', onImgLoad);
     }
   });
-
-  // Recalculer au redimensionnement
   if (window.ResizeObserver) {
     var ro = new ResizeObserver(function () { updateImageWrappers(); });
     ro.observe(document.querySelector('.main-grid'));
