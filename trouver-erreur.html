@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Trouver l'erreur — Détecter les électrodes mal placées</title>
+<title>Trouver l'erreur : Détecter les électrodes mal placées</title>
 <style>
   /* ===== Reset & base ===== */
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -162,11 +162,7 @@
   @media (max-width: 900px) {
     .electrode { width: 38px; height: 38px; font-size: 10px; }
   }
-  /* ===== Responsive : les électrodes rétrécissent sur téléphone ===== */
-  /* Avant ce fixe, les électrodes restaient à 38px en dessous de 900px, ce qui
-     était trop grand par rapport à l'image du corps/thorax qui, elle, rétrécit
-     avec la fenêtre. On ajoute deux paliers supplémentaires pour que les cercles
-     restent proportionnés à l'image. Les badges (?/✓/!/✗) suivent aussi. */
+
   @media (max-width: 600px) {
     .electrode { width: 32px; height: 32px; font-size: 9px; }
     .electrode.flagged::after,
@@ -192,12 +188,10 @@
     transform: translate(-50%, -50%) scale(1.08);
     box-shadow: 0 2px 6px rgba(0,0,0,0.3);
   }
-  /* Accessibilité clavier : anneau de focus visible uniquement au clavier */
   .electrode:focus-visible {
     outline: 3px solid #1a1a1a;
     outline-offset: 2px;
   }
-  /* ---- États de sélection (clic utilisateur) ---- */
   .electrode.flagged {
     box-shadow: 0 0 0 4px #1a1a1a, 0 2px 6px rgba(0,0,0,0.4);
     transform: translate(-50%, -50%) scale(1.05);
@@ -219,9 +213,7 @@
     justify-content: center;
     border: 1.5px solid #fff;
   }
-  /* ---- États après validation ---- */
   .electrode.revealed-correct-user {
-    /* utilisateur a cliqué à juste titre (vrai positif) */
     box-shadow: 0 0 0 4px #16a34a, 0 2px 6px rgba(0,0,0,0.3);
   }
   .electrode.revealed-correct-user::after {
@@ -242,7 +234,6 @@
     border: 1.5px solid #fff;
   }
   .electrode.revealed-missed {
-    /* utilisateur n'a pas cliqué sur une électrode mal placée (faux négatif) */
     box-shadow: 0 0 0 4px #dc2626, 0 2px 6px rgba(0,0,0,0.3);
     opacity: 0.92;
   }
@@ -264,7 +255,6 @@
     border: 1.5px solid #fff;
   }
   .electrode.revealed-false-positive {
-    /* utilisateur a cliqué alors que l'électrode était bien placée (faux positif) */
     box-shadow: 0 0 0 4px #f97316, 0 2px 6px rgba(0,0,0,0.3);
     opacity: 0.85;
   }
@@ -290,7 +280,6 @@
     pointer-events: none;
   }
 
-  /* ===== Zone image ===== */
   .image-zone {
     position: relative;
     display: flex;
@@ -313,7 +302,6 @@
   }
   .image-wrapper {
     position: relative;
-    /* dimensions définies par JS pour préserver l'aspect ratio */
   }
   .image-wrapper img {
     display: block;
@@ -388,7 +376,6 @@
   button.secondary:hover { background: #f5f5f5; }
   button[hidden] { display: none; }
 
-  /* ===== Légende (sous le footer) ===== */
   .legend {
     padding: 8px 16px;
     background: #fafafa;
@@ -411,7 +398,6 @@
   .legend-swatch.missed  { box-shadow: 0 0 0 2px #dc2626; }
   .legend-swatch.fp      { box-shadow: 0 0 0 2px #f97316; }
 
-  /* ===== Modal final ===== */
   .final-overlay {
     position: absolute;
     inset: 0;
@@ -558,9 +544,6 @@
 <script>
 (function () {
   'use strict';
-
-  // ===== Positions anatomiques canoniques (en % de l'image) =====
-  // (reprises de carto-electrodes.html)
   var CORRECT_POSITIONS = {
     RA: { domain: 'body',   x: 19, y: 50 },
     LA: { domain: 'body',   x: 81, y: 50 },
@@ -580,8 +563,8 @@
 
   // Paires d'électrodes qui peuvent être permutées (swap)
   var LIMB_SWAP_PAIRS = [
-    ['RA', 'LA'],   // bras gauche/droit inversés
-    ['RL', 'LL']    // jambes gauche/droite inversées
+    ['RA', 'LA'],   
+    ['RL', 'LL']    
   ];
   var PREC_SWAP_PAIRS = [
     ['V1', 'V2'],
@@ -592,20 +575,20 @@
   ];
 
   var TOTAL_ROUNDS = 5;
-  var MIN_ERRORS = 2;     // nombre minimum d'erreurs par manche
-  var MAX_ERRORS = 4;     // nombre maximum d'erreurs par manche
+  var MIN_ERRORS = 2;    
+  var MAX_ERRORS = 4;
 
   // ===== État global =====
   var state = {
     round: 0,
-    placements: {},      // id -> { domain, x, y }  (position effective de l'électrode)
-    wrongSet: {},        // id -> true  (électrodes réellement mal placées)
-    flaggedSet: {},      // id -> true  (électrodes cliquées par l'utilisateur)
+    placements: {},      
+    wrongSet: {},        
+    flaggedSet: {},      
     validated: false,
-    roundScores: [],     // [{tp, fp, fn, score}, ...]
-    roundStates: [],     // ['correct' | 'partial' | 'wrong', ...]
-    electrodes: {},      // id -> DOM element
-    lastChosenPairs: []  // paires permutées de la manche précédente (pour éviter les répétitions)
+    roundScores: [],    
+    roundStates: [],   
+    electrodes: {},     
+    lastChosenPairs: [] 
   };
 
   var msg = document.getElementById('message');
@@ -615,8 +598,6 @@
   var nextBtn = document.getElementById('next-btn');
   var restartBtn = document.getElementById('restart-btn');
   var finalOverlay = document.getElementById('final-overlay');
-
-  // ===== Utilitaires =====
   function shuffle(arr) {
     var a = arr.slice();
     for (var i = a.length - 1; i > 0; i--) {
@@ -627,10 +608,6 @@
   }
   function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
   function randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
-
-  // ===== Génération d'une manche =====
-  // Pour garantir que deux manches consécutives n'aient AUCUNE électrode en commun,
-  // on exclut du pool toutes les paires contenant une électrode utilisée à la manche précédente.
   function generateRound() {
     // 1. Partir des positions canoniques
     var placements = {};
@@ -657,20 +634,6 @@
     var availableLimb = LIMB_SWAP_PAIRS.filter(pairAvailable);
     var availablePrec = PREC_SWAP_PAIRS.filter(pairAvailable);
 
-    // Si le filtrage strict (aucune électrode en commun avec la manche précédente)
-    // laisse un pool vide, on relaxe la contrainte en deux étapes pour continuer
-    // à éviter, dans la mesure du possible, de reprendre exactement la même paire
-    // qu'à la manche précédente :
-    //   1) autoriser les paires qui partagent au moins une électrode avec la
-    //      manche précédente, mais qui ne sont pas EXACTEMENT la même paire ;
-    //   2) si même cela est vide (cas extrême où toutes les paires ont déjà été
-    //      utilisées au tour précédent), autoriser toutes les paires.
-    // NOTE : l'ancien code `LIMB_SWAP_PAIRS.filter(pairAvailable)` reproduisait
-    // exactement le filtre ci-dessus et renvoyait donc [] à nouveau — c'était
-    // du code mort. La branche finale `if (availableLimb.length === 0 && ...)`
-    // est désormais inatteignable puisque chaque branche garantit un pool non
-    // vide (les tableaux LIMB_SWAP_PAIRS et PREC_SWAP_PAIRS ont toujours ≥1
-    // paire), elle a donc été supprimée.
     function notSameAsLastRound(pair) {
       return !state.lastChosenPairs.some(function (prev) {
         return prev[0] === pair[0] && prev[1] === pair[1];
@@ -721,7 +684,7 @@
       }
     }
 
-    // 4. Sécurité : s'il n'y a pas assez d'erreurs, forcer une paire précordiale
+    // 4. Sécurité
     if (Object.keys(wrong).length < MIN_ERRORS) {
       for (var i = 0; i < PREC_SWAP_PAIRS.length; i++) {
         var p = PREC_SWAP_PAIRS[i];
@@ -742,7 +705,7 @@
     return { placements: placements, wrongSet: wrong };
   }
 
-  // ===== Construction des électrodes (DOM) =====
+  // ===== Construction des électrodes =====
   function buildElectrodes() {
     // Vider d'abord les wrappers
     var bodyWrapper = document.getElementById('body-wrapper');
@@ -761,8 +724,6 @@
       el.textContent = id;
       el.style.left = pos.x + '%';
       el.style.top = pos.y + '%';
-      // Accessibilité clavier : l'électrode est un bouton focalisable.
-      // Tab navigue entre les électrodes, Entrée/Espace bascule l'état « signalée ».
       el.setAttribute('tabindex', '0');
       el.setAttribute('role', 'button');
       el.setAttribute('aria-pressed', 'false');
@@ -782,12 +743,9 @@
     };
   }
 
-  // Gestionnaire clavier : Entrée et Espace basculent l'état « signalée ».
-  // Tab permet de naviguer d'une électrode à l'autre.
   function makeKeydownHandler(id) {
     return function (e) {
       if (state.validated) return;
-      // Entrée ou Espace → basculer (comme un clic)
       if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
         e.preventDefault();
         e.stopPropagation();
@@ -838,9 +796,6 @@
     });
 
     var totalWrong = Object.keys(state.wrongSet).length;
-    // Score de la manche : on récompense les TP, on pénalise les FP.
-    // Score = max(0, tp - fp) / totalWrong  -> entre 0 et 1
-    // (les fn n'ajoutent pas de pénalité supplémentaire car déjà pénalisés par le numérateur)
     var rawScore = Math.max(0, tp - fp);
     var roundScore = totalWrong > 0 ? rawScore / totalWrong : 0;
 
@@ -915,7 +870,6 @@
     dots.forEach(function (dot) {
       var r = parseInt(dot.getAttribute('data-round'), 10);
       dot.classList.remove('active');
-      // Conserver les classes correct/partial/wrong des manches passées
     });
     var current = document.querySelector('.round-dot[data-round="' + state.round + '"]');
     if (current && !current.classList.contains('correct') &&
@@ -996,7 +950,6 @@
     state.roundScores = [];
     state.roundStates = [];
     state.lastChosenPairs = [];
-    // Réinitialiser les dots
     document.querySelectorAll('.round-dot').forEach(function (dot) {
       dot.classList.remove('active', 'correct', 'partial', 'wrong');
     });
@@ -1031,7 +984,6 @@
 
   // ===== Initialisation =====
   function init() {
-    // Attendre que les images soient chargées
     var imgs = document.querySelectorAll('.image-wrapper img');
     var loaded = 0;
     function onLoad() {
@@ -1050,7 +1002,6 @@
     nextBtn.addEventListener('click', nextRound);
     restartBtn.addEventListener('click', restart);
 
-    // ResizeObserver pour garder les bonnes dimensions
     if (window.ResizeObserver) {
       var ro = new ResizeObserver(function () { updateImageWrappers(); });
       ro.observe(document.querySelector('.main-grid'));
