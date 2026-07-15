@@ -98,7 +98,7 @@
   .header-readout .classification.warn   { color: #f97316; border-color: #f97316; }
   .header-readout .classification.crit   { color: #dc2626; border-color: #dc2626; }
 
-  /* ===== Grille principale : contrôles | capnogramme ===== */
+  /* ===== Grille principale  ===== */
   .main-grid {
     flex: 1 1 0;
     min-height: 0;
@@ -112,7 +112,7 @@
     }
   }
 
-  /* ===== Panneau contrôles (gauche) ===== */
+  /* ===== Panneau contrôles ===== */
   .control-panel {
     padding: 20px 18px;
     border-right: 1px solid #e5e5e5;
@@ -309,7 +309,7 @@
   }
   .reset-btn:hover { background: #f5f5f5; color: #1a1a1a; }
 
-  /* ===== Panneau capnogramme (droite) ===== */
+  /* ===== Panneau capnogramme ===== */
   .capno-panel {
     display: flex;
     flex-direction: column;
@@ -411,7 +411,7 @@
     </header>
 
     <div class="main-grid">
-      <!-- ===== Panneau contrôles (gauche) ===== -->
+      <!-- ===== Panneau contrôles ===== -->
       <section class="control-panel" aria-label="Pilotes physiologiques">
         <div class="panel-title">Pilotes physiologiques</div>
 
@@ -478,7 +478,7 @@
               </marker>
             </defs>
 
-            <!-- Cellule (icône détaillée) -->
+            <!-- Cellule  -->
             <svg x="15" y="20" width="50" height="50" viewBox="0 0 512 512">
               <circle cx="256" cy="256" r="256" fill="#F56E92"/>
               <circle cx="256" cy="256" r="222.242" fill="#FCCFDB"/>
@@ -502,7 +502,7 @@
             <path id="arrow-vco2" d="M 70 45 L 130 45" fill="none" stroke="#7c3aed" stroke-width="1.5" marker-end="url(#arr)" opacity="0.9"/>
             <text x="100" y="35" text-anchor="middle" font-family="ui-monospace,monospace" font-size="9" fill="#7c3aed" font-weight="600">sang</text>
 
-            <!-- Poumon (icône détaillée) -->
+            <!-- Poumon  -->
             <svg x="130" y="20" width="50" height="50" viewBox="0 0 128 128">
               <path d="M42.17 20.59C33.54 20.62 13.64 33.83 6.7 64s.33 48.53 22.52 50.25c21.77 1.69 28.24-13.56 29.22-18.81c2.88-15.35.25-40.88-2.75-54.77s-4.93-20.11-13.52-20.08z" fill="#fea8a7"/>
               <path d="M73.29 92.99c1.19 5.17 1 9.47 3.52 13.94c3.1 5.49 7.89 6.33 7.89 6.33l-4.23-23.65l-9.71-10.14l-1.54 2.55c-.01.01 2.99 6.29 4.07 10.97z" fill="#fed0b0"/>
@@ -532,7 +532,7 @@
             <!-- EtCO2 affiché -->
             <text x="245" y="80" text-anchor="middle" font-family="ui-monospace,monospace" font-size="11" font-weight="700" fill="#16a34a">EtCO₂</text>
 
-            <!-- Cœur (icône détaillée) -->
+            <!-- Cœur  -->
             <svg x="85" y="72" width="30" height="30" viewBox="0 0 128 128">
               <path d="M14.77 37.29s-1.13 1.31-1.88 3.75s-.42 4.93-.42 4.93s3.77 1.97 10.07 2.25c5.19.23 7.95-.7 11.9-3.59s10.66 1.76 13.69 3.17c3.03 1.41 30 11.83 30 11.83l19.62 1.22s.75-2.16 0-7.32s-5.44-9.29-9.1-10.79c-3.66-1.5-6.01-1.69-6.01-1.69L58.69 26.97s-6.6-.46-13.33 1.03C40.3 29.13 29.6 38.89 23.4 38.7s-8.63-1.41-8.63-1.41z" fill="#d43330"/>
               <path d="M58.64 20.82l-2.6-13.91S57.28 5 59.77 4.58s4.36.8 4.36.8l2.35 16.1h1.88l1.78-14.55s1.03-1.22 4.18-.73c2.91.46 3.39 1.77 3.39 1.77l-1.6 14.96l-16.8 7.09l-7.41-.89l-9.34-13.66s.28-2.3 2.58-3.61s3.94-1.08 3.94-1.08l8.92 13l.8-.8l-.16-2.16z" fill="#f44236"/>
@@ -602,10 +602,7 @@
     return Math.max(4, Math.min(40, Math.round(state.va / 0.35)));
   }
   function computeEtco2() {
-    // 863 · V̇CO₂[mL/min] / V̇A[L/min]  donne PaCO₂ approximatif
     var paco2 = 863 * state.vco2 / 1000 / state.va;
-    // Effet perfusion : si Q̇ < 5, le gradient A-a augmente (EtCO₂ < PaCO₂)
-    // gradient = max(3, 3 + (5 - Q̇) * 4)
     var grad = Math.max(3, 3 + (5 - state.co) * 4);
     var etco2 = paco2 - grad;
     return { etco2: Math.max(0, etco2), paco2: paco2, grad: grad };
@@ -687,8 +684,6 @@
     var yMax = Math.max(60, Math.ceil((etco2 * 1.1) / 10) * 10);
     var pxPerMmhg = availableH / yMax;
     var pxPerSec = dims.pxPerSec;
-
-    // Durée d'un cycle (s) = 60 / RR
     var cycleSec = 60 / rr;
     var cyclePx = cycleSec * pxPerSec;
 
@@ -705,8 +700,6 @@
       samples.push({ x: x, y: y, phase: phaseAtT });
     }
 
-    // Bandes de phase en fond (uniquement pour le cycle le plus récent, à droite)
-    // On dessine des bandes toutes les cyclePx à partir de la droite
     ctx.save();
     var rightEdge = w;
     var cycleStartX = rightEdge - ((animTime % cycleSec) / cycleSec) * cyclePx;
@@ -750,7 +743,6 @@
     var etco2TraceValue = etco2Template(0.85) * etco2;
     var etco2Y = baselineY - etco2TraceValue * pxPerMmhg;
     if (etco2X >= 0 && etco2X <= w) {
-      // Trait pointillé horizontal depuis le plateau jusqu'à l'axe Y
       ctx.strokeStyle = '#dc2626';
       ctx.lineWidth = 1;
       ctx.setLineDash([4, 3]);
@@ -764,8 +756,6 @@
       ctx.lineTo(etco2X, baselineY);
       ctx.stroke();
       ctx.setLineDash([]);
-
-      // Cercle marqueur
       ctx.fillStyle = '#dc2626';
       ctx.beginPath();
       ctx.arc(etco2X, etco2Y, 4, 0, Math.PI * 2);
@@ -774,8 +764,6 @@
       ctx.lineWidth = 1.5;
       ctx.stroke();
     }
-
-    // Étiquette EtCO₂
     ctx.fillStyle = '#dc2626';
     ctx.font = '700 11px ui-monospace, monospace';
     ctx.textAlign = 'left';
@@ -784,8 +772,6 @@
       var labelOffset = (etco2Y > 24) ? -8 : 14;
       ctx.fillText('EtCO₂ = ' + Math.round(etco2) + ' mmHg', etco2X + 8, etco2Y + labelOffset);
     }
-
-    // Échelle verticale
     ctx.fillStyle = '#737373';
     ctx.font = '500 9px ui-monospace, monospace';
     ctx.textAlign = 'left';
@@ -797,8 +783,6 @@
       }
     }
     ctx.fillText('mmHg', 4, 14);
-
-    // Axe Y de la ligne de base
     ctx.strokeStyle = '#d4d4d4';
     ctx.lineWidth = 0.5;
     ctx.beginPath();
@@ -834,7 +818,7 @@
   }
 
   /* ==========================================================================
-   * UI — sliders + readouts
+   * UI : sliders + readouts
    * ========================================================================== */
   var vco2Slider = document.getElementById('vco2');
   var coSlider = document.getElementById('co');
@@ -868,9 +852,6 @@
     vco2Num.textContent = state.vco2;
     coNum.textContent = state.co.toFixed(1).replace('.', ',');
     vaNum.textContent = state.va.toFixed(1).replace('.', ',');
-
-    // Bar fill: width % shows only up to current value, gradient spans
-    // the full slider range so colors are positionally correct.
     var vco2Pct = Math.max(1, pct(80, 500, state.vco2));
     var coPct = Math.max(1, pct(1.5, 8.0, state.co));
     var vaPct = Math.max(1, pct(1.5, 10.0, state.va));
