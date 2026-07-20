@@ -29,13 +29,6 @@ La simulation haute fidélité ne devrait pas nécessiter un budget important ni
 | **ECG sur papier** | Bibliothèque de 15 ECG 12 dérivations (normal, axe, STEMI, blocs, AFib, flutter, hyperkaliémie, HVG) prêts à imprimer sur papier ECG standard. | [Ouvrir l'application](ecg-papier.html) |
 | **Auscultateur cardiaque** | 16 sons cardiaques (normaux, souffles systoliques/diastoliques, B3/B4, frottements péricardiques) avec placement du stéthoscope sur thorax anatomique et cycle cardiaque animé. | [Ouvrir l'application](auscultateur-cardiaque.html) |
 
-## Fonctionnalités transversales
-
-Toutes les applications partagent désormais deux fonctionnalités communes :
-
-- **Thème Clair / Sombre** : bascule via le bouton ◐ en haut à droite ou le raccourci `D`. Le thème Clair est utilisé par défaut à chaque chargement.
-- **Raccourcis clavier** : `Espace` = pause/reprise, `D` = basculer le thème, `R` = réinitialiser, `?` = afficher l'aide.
-
 *D'autres simulations (respirateurs artificiels, moniteurs, pousse-seringues) arriveront bientôt !*
 
 ### Différence entre les deux versions de l'axe cardiaque
