@@ -4,7 +4,7 @@ title: "PMSS - La Plate-forme Marocaine de Simulation en Santé"
 authors:
   - family-names: "Razzok"
     given-names: "Oualid"
-version: 1.0.0
-date-released: "2026-07-09"
+version: 1.1.0
+date-released: "2026-07-19"
 url: "https://github.com/oualid-razzok/PMSS-Simulations"
 abstract: "A collection of lightweight, offline-first, single-file HTML healthcare simulation webapps designed to democratize medical education."
