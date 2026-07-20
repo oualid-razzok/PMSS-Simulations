@@ -12,7 +12,7 @@ La simulation haute fidélité ne devrait pas nécessiter un budget important ni
 - **Légère :** Chaque application est un fichier HTML autonome, généralement sous 2 Mo.
 - **Universelle :** Fonctionne sur tout appareil doté d'un navigateur moderne comme un PC, tablette ou smartphone.
 - **Décentralisée :** Chaque application est autonome et sans dépendance externe.
-- **Gratuite :** Sous licence CC BY 4.0, y compris pour un usage commercial (avec attribution).
+- **Gratuite :** Sous licence CC BY-NC 4.0.
 
 ## Simulations disponibles
 
@@ -48,7 +48,7 @@ Vous avez une demande pour une machine médicale spécifique ou un scénario cli
 
 ## Citation et usage académique
 
-Ces outils sont sous licence CC BY 4.0, qui autorise l'usage non commercial et commercial, l'adaptation et la redistribution — à condition de fournir une attribution appropriée.
+Ces outils sont sous licence CC BY-NC 4.0, qui autorise l'usage non commercial, l'adaptation et la redistribution, à condition de fournir une attribution appropriée.
 
 **Si vous utilisez les applications PMSS dans vos recherches, votre enseignement ou vos publications scientifiques, vous devez référencer ce travail.**
 
@@ -60,12 +60,11 @@ Veuillez nous citer comme suit :
 
 ## Licence
 
-[![License: CC BY 4.0](https://img.shields.io/badge/License-CC_BY_4.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
+[![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
 
-Ce projet est sous licence **Creative Commons Attribution 4.0 International (CC BY 4.0)**.
+Ce projet est sous licence **Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)**.
 
--  Vous pouvez **partager** et **adapter** le matériel pour **tout usage, y compris commercial**.
--  Vous pouvez distribuer les œuvres dérivées sous n'importe quelle licence.
+-  Vous pouvez **partager** et **adapter** le matériel pour **tout usage non-commercial**.
 - Vous **devez** accorder un crédit approprié, fournir un lien vers la licence et indiquer si des modifications ont été effectuées.
 
-Consultez le fichier [LICENCE](LICENCE) pour le texte complet de la licence, ou lisez le [résumé en langue courante](https://creativecommons.org/licenses/by/4.0/).
+Consultez le fichier [LICENCE](LICENCE) pour le texte complet de la licence, ou lisez le [résumé en langue courante](https://creativecommons.org/licenses/by-nc/4.0/).
