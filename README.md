@@ -25,7 +25,6 @@ La simulation haute fidélité ne devrait pas nécessiter un budget important ni
 | **Trouver l'erreur** | Entraînement diagnostique pour repérer les anomalies dans les tracés ECG. | [Ouvrir l'application](trouver-erreur.html) |
 | **ECG-anomalies** | Quiz diagnostique avancé : 17 anomalies ECG critiques (STEMI, Brugada, Torsades, etc.) à identifier sur 12 dérivations. | [Ouvrir l'application](ecg-anomalies.html) |
 | **Capno-bases** | Simulateur de capnographie : pilotez V̇CO₂, Q̇ et V̇A pour comprendre les déterminants de l'EtCO₂ en temps réel. | [Ouvrir l'application](capno-bases.html) |
-| **Défibrillateur** | Simulateur ACLS : 6 rythmes cardiaques (sinus, FV fine/coarse, VT monomorphe, asystolie, AESP), modes manuel / DAE / synchronisé, charge et choc, réponse post-choc. | [Ouvrir l'application](defibrillateur.html) |
 | **ECG sur papier** | Bibliothèque de 15 ECG 12 dérivations (normal, axe, STEMI, blocs, AFib, flutter, hyperkaliémie, HVG) prêts à imprimer sur papier ECG standard. | [Ouvrir l'application](ecg-papier.html) |
 | **Auscultateur cardiaque** | 16 sons cardiaques (normaux, souffles systoliques/diastoliques, B3/B4, frottements péricardiques) avec placement du stéthoscope sur thorax anatomique et cycle cardiaque animé. | [Ouvrir l'application](auscultateur-cardiaque.html) |
 
