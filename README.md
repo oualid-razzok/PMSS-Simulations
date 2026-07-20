@@ -1,4 +1,4 @@
-# 🇲🇦 PMSS - La Plate-forme Marocaine de Simulation en Santé
+# PMSS - La Plate-forme Marocaine de Simulation en Santé
 
 **« La simulation est une technique, pas une technologie. »**
 
