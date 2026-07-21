@@ -151,10 +151,10 @@
     background: rgba(220, 38, 38, 0.2);
     border: 2px solid var(--accent);
     display: flex; align-items: center; justify-content: center;
-    cursor: pointer; transition: transform 0.15s ease, background-color 0.15s ease;
+    cursor: default; pointer-events: none;
+    transition: background-color 0.15s ease, transform 0.15s ease;
     z-index: 2;
   }
-  .focal-point:hover { background: rgba(220, 38, 38, 0.4); transform: translate(-50%, -50%) scale(1.15); }
   .focal-point.active {
     background: var(--accent); transform: translate(-50%, -50%) scale(1.25);
     box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.3);
@@ -543,16 +543,9 @@
   document.querySelectorAll('.sound-btn').forEach(function (b) {
     b.addEventListener('click', function () { selectSound(b.dataset.key); });
   });
-  // Click sur un focal point — joue le premier son de ce foyer
-  document.querySelectorAll('.focal-point').forEach(function (p) {
-    p.addEventListener('click', function () {
-      var focal = p.dataset.focal;
-      // Trouver le premier son de ce foyer
-      for (var k in SOUNDS) {
-        if (SOUNDS[k].focal === focal) { selectSound(k); return; }
-      }
-    });
-  });
+  // Note: focal points are non-interactive indicators only.
+  // They show where each sound is typically heard, but are not clickable.
+  // Users select sounds from the sidebar instead.
 
   /* ===== GRAPHIQUE CYCLE CARDIAQUE ===== */
   var cycleCanvas = document.getElementById('cycle-canvas');
