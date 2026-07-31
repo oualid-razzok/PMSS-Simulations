@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diagramme de Wiggers — Cycle cardiaque</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg-app: #f8f9fa;
+    --bg-panel: #ffffff;
+    --bg-elev: #f5f5f5;
+    --bg-elev-hover: #e5e5e5;
+    --text-primary: #2c3e50;
+    --text-secondary: #7f8c8d;
+    --border: #e0e0e0;
+    --border-strong: #bdc3c7;
+    --accent: #dc2626;
+  }
+  body.sombre {
+    --bg-app: #1f1f1f;
+    --bg-panel: #2a2a2a;
+    --bg-elev: #333333;
+    --bg-elev-hover: #404040;
+    --text-primary: #f0f0f0;
+    --text-secondary: #b0b0b0;
+    --border: #3a3a3a;
+    --border-strong: #555555;
+  }
+
+  html, body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg-app); color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    height: 100%; overflow: hidden;
+  }
+  body { display: flex; flex-direction: column; }
+
+  header.app-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 14px; background: var(--bg-panel);
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap; gap: 8px; flex-shrink: 0;
+  }
+  .app-title { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+  .app-title h1 { font-size: 15px; font-weight: 600; color: var(--text-primary); }
+  .app-title .subtitle {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;
+    color: var(--text-secondary);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  @media (max-width: 540px) { .app-title .subtitle { display: none; } }
+  .toolbar { display: flex; align-items: center; gap: 6px; }
+  .icon-btn {
+    width: 34px; height: 34px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: var(--bg-elev); border: 1px solid var(--border-strong);
+    border-radius: 8px; cursor: pointer; color: var(--text-primary);
+    font-size: 16px; padding: 0;
+    transition: background-color 0.15s ease;
+  }
+  .icon-btn:hover { background: var(--bg-elev-hover); }
+
+  main {
+    flex: 1; display: flex; flex-direction: column;
+    gap: 6px; padding: 8px; min-height: 0; overflow: hidden;
+  }
+
+  .controls-bar {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--bg-panel); border: 1px solid var(--border);
+    border-radius: 8px; padding: 6px 12px; flex-wrap: wrap; flex-shrink: 0;
+  }
+  .play-btn {
+    display: flex; align-items: center; gap: 6px;
+    padding: 6px 14px;
+    background: var(--accent); color: white;
+    border: none; border-radius: 6px;
+    cursor: pointer; font-size: 13px; font-weight: 600;
+    font-family: inherit;
+    transition: opacity 0.15s ease;
+  }
+  .play-btn:hover { opacity: 0.9; }
+  .speed-control { display: flex; align-items: center; gap: 6px; }
+  .speed-control label {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;
+    color: var(--text-secondary);
+  }
+  .speed-control select {
+    padding: 4px 6px;
+    background: var(--bg-elev); color: var(--text-primary);
+    border: 1px solid var(--border-strong); border-radius: 4px;
+    font-size: 11px; font-family: inherit; cursor: pointer;
+  }
+  .hr-control { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 120px; }
+  .hr-control label {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;
+    color: var(--text-secondary); white-space: nowrap;
+  }
+  .hr-control input[type="range"] {
+    flex: 1; height: 4px; -webkit-appearance: none; appearance: none;
+    background: var(--bg-elev); border-radius: 999px; cursor: pointer;
+  }
+  .hr-control input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: var(--accent); cursor: pointer; border: 2px solid var(--bg-panel);
+  }
+  .hr-control input[type="range"]::-moz-range-thumb {
+    width: 14px; height: 14px; border-radius: 50%;
+    background: var(--accent); cursor: pointer; border: 2px solid var(--bg-panel);
+  }
+  .hr-value {
+    font-family: ui-monospace, monospace; font-size: 12px; font-weight: 600;
+    color: var(--text-primary); min-width: 45px; text-align: right;
+  }
+
+  .phase-label {
+    text-align: center; font-size: 13px; font-weight: 600;
+    color: var(--text-primary);
+    padding: 4px 12px;
+    background: var(--bg-panel); border: 1px solid var(--border);
+    border-radius: 6px; flex-shrink: 0;
+  }
+  .phase-label .phase-desc {
+    font-size: 10px; font-weight: 400; color: var(--text-secondary);
+    display: block; margin-top: 1px;
+  }
+
+  .diagram-container {
+    flex: 1; background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    display: flex; align-items: stretch; justify-content: center;
+    min-height: 0; overflow: hidden;
+    padding: 4px;
+  }
+  .diagram-container svg {
+    width: 100%; height: 100%;
+    display: block;
+  }
+
+  /* Dark mode SVG overrides */
+  body.sombre .grid-line { stroke: #3a3a3a !important; }
+  body.sombre .phase-line { stroke: #555555 !important; }
+  body.sombre .axis-label { fill: #d0d0d0 !important; }
+  body.sombre .axis-sub { fill: #909090 !important; }
+  body.sombre .phase-label-svg { fill: #b0b0b0 !important; }
+  body.sombre .annotation { fill: #ef4444 !important; }
+  body.sombre .annotation-black { fill: #e0e0e0 !important; }
+  body.sombre .annotation-vol { fill: #c084fc !important; }
+  body.sombre .cycle-label { fill: #808080 !important; }
+  body.sombre .svg-bg { fill: #2a2a2a !important; }
+
+  .events-list {
+    display: flex; flex-wrap: wrap; gap: 4px;
+    padding: 4px 8px; flex-shrink: 0;
+    background: transparent;
+  }
+  .event-chip {
+    font-size: 10px; padding: 2px 8px;
+    border-radius: 4px;
+    background: var(--bg-elev); color: var(--text-secondary);
+    border: 1px solid var(--border);
+    white-space: nowrap;
+    transition: background-color 0.15s ease, color 0.15s ease;
+  }
+  .event-chip.active {
+    background: var(--accent); color: white; border-color: var(--accent);
+  }
+</style>
+</head>
+<body>
+  <header class="app-header">
+    <div class="app-title">
+      <h1>Diagramme de Wiggers</h1>
+      <span class="subtitle">Cycle cardiaque · 2 cycles synchronisés</span>
+    </div>
+    <div class="toolbar">
+      <button type="button" class="icon-btn" id="theme-btn" aria-label="Thème" title="Thème (D)">◐</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="controls-bar">
+      <button type="button" class="play-btn" id="play-btn">
+        <span id="play-icon">▶</span> <span id="play-label">Lecture</span>
+      </button>
+      <div class="speed-control">
+        <label>Vitesse</label>
+        <select id="speed-select">
+          <option value="0.5">0.5×</option>
+          <option value="1" selected>1×</option>
+          <option value="2">2×</option>
+        </select>
+      </div>
+      <div class="hr-control">
+        <label>FC</label>
+        <input type="range" id="hr-slider" min="40" max="160" step="1" value="75">
+        <span class="hr-value"><span id="hr-value">75</span> bpm</span>
+      </div>
+    </div>
+
+    <div class="phase-label" id="phase-label">
+      —<span class="phase-desc" id="phase-desc">Lancez l'animation</span>
+    </div>
+
+    <div class="diagram-container">
+      <svg id="wiggers-svg" viewBox="0 0 1400 720" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
+        <rect class="svg-bg" width="1400" height="720" fill="#ffffff" />
+
+        <!-- Phase Vertical Dividers (Cycle 1: 120 start, 212, 273, 458, 520, 735 end) -->
+        <line x1="212" y1="48" x2="212" y2="700" class="phase-line" stroke="#bdc3c7" stroke-width="1.5" stroke-dasharray="6,4" />
+        <line x1="273" y1="48" x2="273" y2="700" class="phase-line" stroke="#bdc3c7" stroke-width="1.5" stroke-dasharray="6,4" />
+        <line x1="458" y1="48" x2="458" y2="700" class="phase-line" stroke="#bdc3c7" stroke-width="1.5" stroke-dasharray="6,4" />
+        <line x1="520" y1="48" x2="520" y2="700" class="phase-line" stroke="#bdc3c7" stroke-width="1.5" stroke-dasharray="6,4" />
+        <line x1="735" y1="48" x2="735" y2="700" stroke="#7f8c8d" stroke-width="2" stroke-dasharray="2,2"/>
+
+        <!-- Phase Vertical Dividers (Cycle 2: 735 start, 827, 888, 1073, 1135, 1350 end) -->
+        <line x1="827" y1="48" x2="827" y2="700" class="phase-line" stroke="#bdc3c7" stroke-width="1.5" stroke-dasharray="6,4" />
+        <line x1="888" y1="48" x2="888" y2="700" class="phase-line" stroke="#bdc3c7" stroke-width="1.5" stroke-dasharray="6,4" />
+        <line x1="1073" y1="48" x2="1073" y2="700" class="phase-line" stroke="#bdc3c7" stroke-width="1.5" stroke-dasharray="6,4" />
+        <line x1="1135" y1="48" x2="1135" y2="700" class="phase-line" stroke="#bdc3c7" stroke-width="1.5" stroke-dasharray="6,4" />
+
+        <!-- Cycle Labels -->
+        <text x="427" y="20" class="cycle-label" font-size="13" font-weight="bold" fill="#2c3e50" text-anchor="middle" opacity="0.5">CYCLE 1</text>
+        <text x="1042" y="20" class="cycle-label" font-size="13" font-weight="bold" fill="#2c3e50" text-anchor="middle" opacity="0.5">CYCLE 2</text>
+
+        <!-- Phase Labels (based on Cycle 1) -->
+        <text x="166" y="40" class="phase-label-svg" font-size="11" font-weight="600" fill="#34495e" text-anchor="middle">Syst. auric.</text>
+        <text x="242" y="35" class="phase-label-svg" font-size="11" font-weight="600" fill="#34495e" text-anchor="middle">Contr. iso.</text>
+        <text x="365" y="40" class="phase-label-svg" font-size="11" font-weight="600" fill="#34495e" text-anchor="middle">Éjection vent.</text>
+        <text x="489" y="35" class="phase-label-svg" font-size="11" font-weight="600" fill="#34495e" text-anchor="middle">Relax. iso.</text>
+        <text x="627" y="40" class="phase-label-svg" font-size="11" font-weight="600" fill="#34495e" text-anchor="middle">Remplissage vent.</text>
+
+        <!-- Horizontal Grid Lines & Y-Axis Labels -->
+        <line x1="120" y1="130" x2="1350" y2="130" class="grid-line" stroke="#e0e0e0" stroke-width="1" stroke-dasharray="4,4" />
+        <text x="112" y="88" class="axis-label" font-size="11" font-weight="bold" fill="#2c3e50" text-anchor="end">P. aortique</text>
+        <text x="112" y="100" class="axis-sub" font-size="9" fill="#7f8c8d" text-anchor="end">(mmHg)</text>
+
+        <line x1="120" y1="230" x2="1350" y2="230" class="grid-line" stroke="#e0e0e0" stroke-width="1" stroke-dasharray="4,4" />
+        <text x="112" y="188" class="axis-label" font-size="11" font-weight="bold" fill="#2c3e50" text-anchor="end">P. vent. G</text>
+        <text x="112" y="200" class="axis-sub" font-size="9" fill="#7f8c8d" text-anchor="end">(mmHg)</text>
+
+        <line x1="120" y1="310" x2="1350" y2="310" class="grid-line" stroke="#e0e0e0" stroke-width="1" stroke-dasharray="4,4" />
+        <text x="112" y="278" class="axis-label" font-size="11" font-weight="bold" fill="#2c3e50" text-anchor="end">P. auric. G</text>
+        <text x="112" y="290" class="axis-sub" font-size="9" fill="#7f8c8d" text-anchor="end">(mmHg)</text>
+
+        <line x1="120" y1="430" x2="1350" y2="430" class="grid-line" stroke="#e0e0e0" stroke-width="1" stroke-dasharray="4,4" />
+        <text x="112" y="378" class="axis-label" font-size="11" font-weight="bold" fill="#2c3e50" text-anchor="end">Volume VG</text>
+        <text x="112" y="390" class="axis-sub" font-size="9" fill="#7f8c8d" text-anchor="end">(mL)</text>
+
+        <line x1="120" y1="530" x2="1350" y2="530" class="grid-line" stroke="#e0e0e0" stroke-width="1" stroke-dasharray="4,4" />
+        <text x="112" y="488" class="axis-label" font-size="11" font-weight="bold" fill="#2c3e50" text-anchor="end">ECG</text>
+
+        <line x1="120" y1="590" x2="1350" y2="590" class="grid-line" stroke="#e0e0e0" stroke-width="1" stroke-dasharray="4,4" />
+        <text x="112" y="568" class="axis-label" font-size="11" font-weight="bold" fill="#2c3e50" text-anchor="end">Phono.</text>
+
+        <text x="112" y="622" class="axis-label" font-size="10" font-weight="bold" fill="#2c3e50" text-anchor="end">Valve aort.</text>
+        <text x="112" y="682" class="axis-label" font-size="10" font-weight="bold" fill="#2c3e50" text-anchor="end">Valve mitr.</text>
+
+        <!-- 1. Aortic Pressure (two cycles) -->
+        <path d="M 120,110 L 260,110 C 280,110 320,50 360,50 C 400,50 440,95 458,95 L 465,90 C 500,85 600,110 735,110 L 875,110 C 895,110 935,50 975,50 C 1015,50 1055,95 1073,95 L 1080,90 C 1115,85 1215,110 1350,110" fill="none" stroke="#d32f2f" stroke-width="2.5" />
+        <text x="486" y="78" class="annotation" font-size="10" font-weight="bold" fill="#e74c3c" text-anchor="middle">Incisure</text>
+        <text x="486" y="90" class="annotation" font-size="10" font-weight="bold" fill="#e74c3c" text-anchor="middle">dicrote</text>
+
+        <!-- 2. Ventricular Pressure (two cycles) -->
+        <path d="M 120,220 C 180,220 190,215 212,215 L 260,215 C 265,215 270,135 273,135 C 320,130 400,135 458,135 C 470,135 500,220 520,220 L 735,220 C 795,220 805,215 827,215 L 875,215 C 880,215 885,135 888,135 C 935,130 1015,135 1073,135 C 1085,135 1115,220 1135,220 L 1350,220" fill="none" stroke="#1976d2" stroke-width="2.5" />
+
+        <!-- 3. Atrial Pressure (two cycles) -->
+        <path d="M 120,290 C 160,290 190,255 212,255 C 230,255 260,290 285,290 C 295,290 305,265 325,265 C 345,265 370,290 450,290 C 480,290 510,255 520,255 C 530,255 540,290 735,290 C 775,290 805,255 827,255 C 845,255 875,290 900,290 C 910,290 920,265 940,265 C 960,265 985,290 1065,290 C 1095,290 1125,255 1135,255 C 1145,255 1155,290 1350,290" fill="none" stroke="#388e3c" stroke-width="2.5" />
+        <text x="212" y="245" class="annotation-black" font-size="10" font-weight="bold" fill="#2c3e50" text-anchor="middle">a</text>
+        <text x="325" y="258" class="annotation-black" font-size="10" font-weight="bold" fill="#2c3e50" text-anchor="middle">c</text>
+        <text x="510" y="245" class="annotation-black" font-size="10" font-weight="bold" fill="#2c3e50" text-anchor="middle">v</text>
+
+        <!-- 4. Ventricular Volume (two cycles) -->
+        <path d="M 120,335 C 160,330 190,315 212,315 L 273,315 C 320,315 400,425 458,425 L 520,425 C 600,425 680,345 735,335 C 775,330 805,315 827,315 L 888,315 C 935,315 1015,425 1073,425 L 1135,425 C 1215,425 1295,345 1350,335" fill="none" stroke="#7b1fa2" stroke-width="2.5" />
+        <text x="245" y="307" class="annotation-vol" font-size="10" font-weight="bold" fill="#7b1fa2" text-anchor="middle">EDV</text>
+        <text x="430" y="418" class="annotation-vol" font-size="10" font-weight="bold" fill="#7b1fa2" text-anchor="middle">ESV</text>
+
+        <!-- 5. ECG (two cycles) — B1 at QRS, NOT at P -->
+        <!-- P wave is at ~180, QRS at ~273, T wave at ~440 -->
+        <path d="M 120,500 L 155,500 C 165,470 185,470 195,500 L 245,500 L 255,510 L 268,500 L 273,440 L 278,510 L 283,500 L 288,495 L 293,500 L 370,500 C 390,470 430,470 450,500 L 735,500 L 770,500 C 780,470 800,470 810,500 L 860,500 L 870,510 L 883,500 L 888,440 L 893,510 L 898,500 L 903,495 L 908,500 L 985,500 C 1005,470 1045,470 1065,500 L 1350,500" fill="none" stroke="#212121" stroke-width="2" />
+        <text x="178" y="462" class="annotation-black" font-size="10" font-weight="bold" fill="#2c3e50" text-anchor="middle">P</text>
+        <text x="273" y="432" class="annotation-black" font-size="10" font-weight="bold" fill="#2c3e50" text-anchor="middle">QRS</text>
+        <text x="430" y="462" class="annotation-black" font-size="10" font-weight="bold" fill="#2c3e50" text-anchor="middle">T</text>
+
+        <!-- 6. Phonocardiogram — B1 at QRS position (x=273), B2 at end ejection (x=458) -->
+        <!-- Cycle 1: S1 at x=268-283 (at QRS), S2 at x=453-468 (at end ejection) -->
+        <path d="M 268,580 L 271,555 L 274,570 L 277,545 L 280,560 L 283,580" fill="none" stroke="#616161" stroke-width="2" />
+        <text x="275" y="540" class="annotation-black" font-size="11" font-weight="bold" fill="#2c3e50" text-anchor="middle">B1</text>
+        <path d="M 453,580 L 456,555 L 459,570 L 462,545 L 465,560 L 468,580" fill="none" stroke="#616161" stroke-width="2" />
+        <text x="460" y="540" class="annotation-black" font-size="11" font-weight="bold" fill="#2c3e50" text-anchor="middle">B2</text>
+        <!-- Cycle 2: S1 at x=883-898, S2 at x=1068-1083 -->
+        <path d="M 883,580 L 886,555 L 889,570 L 892,545 L 895,560 L 898,580" fill="none" stroke="#616161" stroke-width="2" />
+        <text x="890" y="540" class="annotation-black" font-size="11" font-weight="bold" fill="#2c3e50" text-anchor="middle">B1</text>
+        <path d="M 1068,580 L 1071,555 L 1074,570 L 1077,545 L 1080,560 L 1083,580" fill="none" stroke="#616161" stroke-width="2" />
+        <text x="1075" y="540" class="annotation-black" font-size="11" font-weight="bold" fill="#2c3e50" text-anchor="middle">B2</text>
+
+        <!-- 7. Valve States — two cycles -->
+        <!-- Aortic Valve Cycle 1: CLOSED (120-273), OPEN (273-458), CLOSED (458-735) -->
+        <rect x="120" y="610" width="153" height="22" fill="#f44336" opacity="0.85" rx="3" />
+        <rect x="273" y="610" width="185" height="22" fill="#4caf50" opacity="0.85" rx="3" />
+        <rect x="458" y="610" width="277" height="22" fill="#f44336" opacity="0.85" rx="3" />
+        <!-- Aortic Valve Cycle 2 -->
+        <rect x="735" y="610" width="153" height="22" fill="#f44336" opacity="0.85" rx="3" />
+        <rect x="888" y="610" width="185" height="22" fill="#4caf50" opacity="0.85" rx="3" />
+        <rect x="1073" y="610" width="277" height="22" fill="#f44336" opacity="0.85" rx="3" />
+
+        <!-- Mitral Valve Cycle 1: OPEN (120-212), CLOSED (212-520), OPEN (520-735) -->
+        <rect x="120" y="670" width="92" height="22" fill="#4caf50" opacity="0.85" rx="3" />
+        <rect x="212" y="670" width="308" height="22" fill="#f44336" opacity="0.85" rx="3" />
+        <rect x="520" y="670" width="215" height="22" fill="#4caf50" opacity="0.85" rx="3" />
+        <!-- Mitral Valve Cycle 2 -->
+        <rect x="735" y="670" width="92" height="22" fill="#4caf50" opacity="0.85" rx="3" />
+        <rect x="827" y="670" width="308" height="22" fill="#f44336" opacity="0.85" rx="3" />
+        <rect x="1135" y="670" width="215" height="22" fill="#4caf50" opacity="0.85" rx="3" />
+
+        <!-- X-Axis -->
+        <line x1="120" y1="700" x2="1350" y2="700" stroke="#2c3e50" stroke-width="1.5" />
+        <text x="120" y="715" font-size="10" fill="#2c3e50" text-anchor="middle">0s</text>
+        <text x="427" y="715" font-size="10" fill="#2c3e50" text-anchor="middle">0.4s</text>
+        <text x="735" y="715" font-size="10" fill="#2c3e50" text-anchor="middle">0.8s</text>
+        <text x="1042" y="715" font-size="10" fill="#2c3e50" text-anchor="middle">1.2s</text>
+        <text x="1350" y="715" font-size="10" fill="#2c3e50" text-anchor="middle">1.6s</text>
+
+        <!-- Animated cursor -->
+        <line id="cursor-line" x1="120" y1="48" x2="120" y2="700" stroke="#e74c3c" stroke-width="2.5" opacity="0.8" />
+        <circle id="cursor-dot-aortic" cx="120" cy="110" r="4" fill="#d32f2f" stroke="#fff" stroke-width="1.5" />
+        <circle id="cursor-dot-vent" cx="120" cy="220" r="4" fill="#1976d2" stroke="#fff" stroke-width="1.5" />
+        <circle id="cursor-dot-atrial" cx="120" cy="290" r="4" fill="#388e3c" stroke="#fff" stroke-width="1.5" />
+        <circle id="cursor-dot-vol" cx="120" cy="335" r="4" fill="#7b1fa2" stroke="#fff" stroke-width="1.5" />
+        <circle id="cursor-dot-ecg" cx="120" cy="500" r="4" fill="#212121" stroke="#fff" stroke-width="1.5" />
+      </svg>
+    </div>
+
+    <div class="events-list" id="events-list"></div>
+  </main>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ===== THÈME ===== */
+  function setTheme(name) {
+    if (name === 'sombre') document.body.classList.add('sombre');
+    else document.body.classList.remove('sombre');
+  }
+  function cycleTheme() {
+    setTheme(document.body.classList.contains('sombre') ? 'clair' : 'sombre');
+  }
+  document.getElementById('theme-btn').addEventListener('click', cycleTheme);
+
+  /* ===== AUDIO ===== */
+  var B1_B64 = "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";
+
+  var B2_B64 = "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";
+
+  function makeAudioUrl(b64) {
+    var pad = b64.length % 4;
+    if (pad === 2) b64 += '==';
+    else if (pad === 3) b64 += '=';
+    else if (pad === 1) b64 = b64.slice(0, -1);
+    return 'data:audio/mp3;base64,' + b64;
+  }
+
+  var audioB1 = new Audio(makeAudioUrl(B1_B64));
+  var audioB2 = new Audio(makeAudioUrl(B2_B64));
+  audioB1.volume = 0.7;
+  audioB2.volume = 0.7;
+  var audioUnlocked = false;
+
+  function unlockAudio() {
+    if (audioUnlocked) return;
+    audioUnlocked = true;
+    audioB1.volume = 0;
+    audioB1.play().then(function () {
+      audioB1.pause(); audioB1.currentTime = 0; audioB1.volume = 0.7;
+    }).catch(function () { audioB1.volume = 0.7; });
+  }
+
+  function playSound(audio) {
+    if (!audioUnlocked) return;
+    try {
+      audio.pause(); audio.currentTime = 0;
+      var p = audio.play();
+      if (p && p.catch) p.catch(function() {});
+    } catch (e) {}
+  }
+
+  /* ===== COORDINATE SYSTEM =====
+   * SVG viewBox: 0 0 1400 720
+   * Two cycles: x = 120 to 735 (cycle 1), 735 to 1350 (cycle 2)
+   * Total plot width: 1230px for 1.6s at HR=75
+   * One cycle = 615px = 0.8s
+   *
+   * Key X positions (Cycle 1):
+   *   120  = cycle start (0.0s)
+   *   180  = P wave center
+   *   212  = end atrial systole / MV closes
+   *   273  = QRS / B1 / AV opens
+   *   458  = end ejection / B2 / AV closes
+   *   520  = MV opens
+   *   735  = cycle end (0.8s) = cycle 2 start
+   *
+   * Normalized phase within ONE cycle (0=120, 1=735):
+   *   0.00  = start
+   *   0.15  = end atrial systole (x=212)
+   *   0.25  = QRS / B1 / AV opens (x=273) ← B1 IS HERE, NOT AT P
+   *   0.55  = end ejection / B2 (x=458)
+   *   0.65  = MV opens (x=520)
+   *   1.00  = cycle end
+   */
+  var X_START = 120;
+  var CYCLE_WIDTH = 615;  // 735 - 120
+
+  // Convert (cycleIndex, phaseInCycle) to SVG x
+  function toX(cycleIdx, p) {
+    return X_START + cycleIdx * CYCLE_WIDTH + p * CYCLE_WIDTH;
+  }
+
+  // Phases (normalized within one cycle)
+  var PHASES = [
+    { start: 0.00, end: 0.15, name: 'Systole auriculaire', desc: 'Contraction auriculaire — onde P, remplissage ventriculaire final' },
+    { start: 0.15, end: 0.25, name: 'Contraction isovolumétrique', desc: 'Valves fermées — pression VG monte, QRS, B1 (Lub)' },
+    { start: 0.25, end: 0.55, name: 'Éjection ventriculaire', desc: 'Valve aortique ouverte — éjection du sang, volume VG chute' },
+    { start: 0.55, end: 0.65, name: 'Relaxation isovolumétrique', desc: 'Valves fermées — valve aortique se ferme (B2/Dub)' },
+    { start: 0.65, end: 1.00, name: 'Remplissage ventriculaire', desc: 'Valve mitrale ouverte — remplissage passif puis diastase' }
+  ];
+
+  /* ===== STATE ===== */
+  var HR = 75;
+  var SPEED = 1.0;
+  var playing = false;
+  var totalTime = 0;  // accumulates across cycles (0 to 2*cycleDur)
+  var lastFrameTime = 0;
+  var prevP = 0;
+
+  function getCycleDuration() { return 60 / HR; }
+  function getTotalDuration() { return getCycleDuration() * 2; }  // 2 cycles
+
+  /* ===== CURSOR UPDATE ===== */
+  var cursorLine = document.getElementById('cursor-line');
+  var dots = {
+    aortic: document.getElementById('cursor-dot-aortic'),
+    vent: document.getElementById('cursor-dot-vent'),
+    atrial: document.getElementById('cursor-dot-atrial'),
+    vol: document.getElementById('cursor-dot-vol'),
+    ecg: document.getElementById('cursor-dot-ecg')
+  };
+
+  function aorticY(x) {
+    if (x < 260) return 110;
+    if (x < 320) return 110 - 60 * ((x - 260) / 60);
+    if (x < 360) return 50 + 5 * ((x - 320) / 40);
+    if (x < 458) return 95 - 0 * ((x - 360) / 98);
+    if (x < 465) return 90;
+    if (x < 600) return 90 + 20 * ((x - 465) / 135);
+    return 110;
+  }
+  function ventY(x) {
+    if (x < 212) return 220 - 5 * ((x - 120) / 92);
+    if (x < 260) return 215;
+    if (x < 273) return 215 - 80 * ((x - 260) / 13);
+    if (x < 458) return 135;
+    if (x < 520) return 135 + 85 * ((x - 458) / 62);
+    return 220;
+  }
+  function atrialY(x) {
+    var base = 290;
+    if (x > 160 && x < 212) return base - 35 * Math.exp(-Math.pow((x - 200) / 25, 2));
+    if (x > 295 && x < 345) return base - 25 * Math.exp(-Math.pow((x - 325) / 15, 2));
+    if (x > 450 && x < 520) return base - 35 * Math.exp(-Math.pow((x - 510) / 25, 2));
+    return base;
+  }
+  function volY(x) {
+    if (x < 212) return 335 - 20 * ((x - 120) / 92);
+    if (x < 273) return 315;
+    if (x < 458) return 315 + 110 * ((x - 273) / 185);
+    if (x < 520) return 425;
+    if (x < 680) return 425 - 90 * ((x - 520) / 160);
+    return 345 - 10 * ((x - 680) / 55);
+  }
+  function ecgY(x) {
+    if (x < 155) return 500;
+    if (x < 195) return 500 - 30 * Math.sin(((x - 155) / 40) * Math.PI);
+    if (x < 255) return 500;
+    if (x < 268) return 500 + 10 * ((x - 255) / 13);
+    if (x < 273) return 510 - 70 * ((x - 268) / 5);
+    if (x < 278) return 440 + 70 * ((x - 273) / 5);
+    if (x < 283) return 510 - 10 * ((x - 278) / 5);
+    if (x < 293) return 500;
+    if (x < 370) return 500;
+    if (x < 450) return 500 - 30 * Math.sin(((x - 370) / 80) * Math.PI);
+    return 500;
+  }
+
+  function updateCursor(totalP) {
+    // totalP: 0 to 2 (0=cycle1 start, 1=cycle2 start, 2=end)
+    var cycleIdx = Math.floor(totalP);
+    var pInCycle = totalP - cycleIdx;
+    var x = X_START + cycleIdx * CYCLE_WIDTH + pInCycle * CYCLE_WIDTH;
+
+    // For waveforms that repeat, map x back to cycle 1 equivalent
+    var xInCycle1 = X_START + pInCycle * CYCLE_WIDTH;
+
+    cursorLine.setAttribute('x1', x);
+    cursorLine.setAttribute('x2', x);
+    dots.aortic.setAttribute('cx', x);
+    dots.aortic.setAttribute('cy', aorticY(xInCycle1));
+    dots.vent.setAttribute('cx', x);
+    dots.vent.setAttribute('cy', ventY(xInCycle1));
+    dots.atrial.setAttribute('cx', x);
+    dots.atrial.setAttribute('cy', atrialY(xInCycle1));
+    dots.vol.setAttribute('cx', x);
+    dots.vol.setAttribute('cy', volY(xInCycle1));
+    dots.ecg.setAttribute('cx', x);
+    dots.ecg.setAttribute('cy', ecgY(xInCycle1));
+  }
+
+  function updatePhaseLabel(pInCycle) {
+    var phase = PHASES[PHASES.length - 1];
+    for (var i = 0; i < PHASES.length; i++) {
+      if (pInCycle >= PHASES[i].start && pInCycle < PHASES[i].end) { phase = PHASES[i]; break; }
+    }
+    document.getElementById('phase-label').innerHTML =
+      phase.name + '<span class="phase-desc">' + phase.desc + '</span>';
+  }
+
+  function buildEventChips() {
+    var container = document.getElementById('events-list');
+    container.innerHTML = '';
+    var events = [
+      { p: 0.10, label: 'Onde P' },
+      { p: 0.25, label: 'QRS + B1 (Lub)' },
+      { p: 0.25, label: 'Fermeture mitrale' },
+      { p: 0.25, label: 'Ouverture aortique' },
+      { p: 0.50, label: 'Onde T' },
+      { p: 0.55, label: 'B2 (Dub)' },
+      { p: 0.55, label: 'Fermeture aortique' },
+      { p: 0.65, label: 'Ouverture mitrale' }
+    ];
+    events.forEach(function (ev) {
+      var chip = document.createElement('div');
+      chip.className = 'event-chip';
+      chip.dataset.p = ev.p;
+      chip.textContent = ev.label;
+      container.appendChild(chip);
+    });
+  }
+
+  function updateEventChips(pInCycle) {
+    document.querySelectorAll('.event-chip').forEach(function (chip) {
+      var p = parseFloat(chip.dataset.p);
+      if (Math.abs(pInCycle - p) < 0.03) chip.classList.add('active');
+      else chip.classList.remove('active');
+    });
+  }
+
+  /* ===== ANIMATION ===== */
+  function frame(now) {
+    if (lastFrameTime === 0) lastFrameTime = now;
+    var dt = Math.min(0.1, (now - lastFrameTime) / 1000);
+    lastFrameTime = now;
+
+    if (playing) {
+      var totalDur = getTotalDuration();
+      totalTime += dt * SPEED;
+      if (totalTime >= totalDur) totalTime = totalTime % totalDur;
+
+      var cycleDur = getCycleDuration();
+      var cycleIdx = Math.floor(totalTime / cycleDur);
+      var pInCycle = (totalTime % cycleDur) / cycleDur;
+      var totalP = cycleIdx + pInCycle;
+
+      // B1 at pInCycle=0.25 (QRS position, NOT at P wave)
+      if (prevP < 0.25 && pInCycle >= 0.25) playSound(audioB1);
+      // B2 at pInCycle=0.55 (end ejection)
+      if (prevP < 0.55 && pInCycle >= 0.55) playSound(audioB2);
+
+      // Handle cycle boundary
+      if (pInCycle < prevP) {
+        if (prevP < 0.25 && pInCycle >= 0.25) playSound(audioB1);
+        if (prevP < 0.55 && pInCycle >= 0.55) playSound(audioB2);
+      }
+
+      prevP = pInCycle;
+      updatePhaseLabel(pInCycle);
+      updateEventChips(pInCycle);
+      updateCursor(totalP);
+    }
+
+    requestAnimationFrame(frame);
+  }
+
+  /* ===== CONTROLS ===== */
+  var playBtn = document.getElementById('play-btn');
+  var playIcon = document.getElementById('play-icon');
+  var playLabel = document.getElementById('play-label');
+
+  function togglePlay() {
+    unlockAudio();
+    playing = !playing;
+    if (playing) {
+      playIcon.textContent = '⏸';
+      playLabel.textContent = 'Pause';
+      lastFrameTime = 0;
+      var cycleDur = getCycleDuration();
+      prevP = (totalTime % cycleDur) / cycleDur;
+    } else {
+      playIcon.textContent = '▶';
+      playLabel.textContent = 'Lecture';
+    }
+  }
+  playBtn.addEventListener('click', togglePlay);
+
+  document.getElementById('speed-select').addEventListener('change', function (e) {
+    SPEED = parseFloat(e.target.value);
+  });
+
+  var hrSlider = document.getElementById('hr-slider');
+  var hrValueEl = document.getElementById('hr-value');
+  hrSlider.addEventListener('input', function (e) {
+    HR = parseInt(e.target.value, 10);
+    hrValueEl.textContent = HR;
+  });
+
+  function isTextInput(t) {
+    var tag = (t.tagName || '').toLowerCase();
+    return tag === 'input' || tag === 'textarea' || tag === 'select';
+  }
+  document.addEventListener('keydown', function (e) {
+    if (isTextInput(e.target)) return;
+    if (e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); togglePlay(); }
+    else if (e.key === 'd' || e.key === 'D') cycleTheme();
+  });
+
+  /* ===== INIT ===== */
+  buildEventChips();
+  updatePhaseLabel(0);
+  updateCursor(0);
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
