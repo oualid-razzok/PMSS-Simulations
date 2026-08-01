@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Diagramme de Wiggers — Cycle cardiaque</title>
+<title>Diagramme de Wiggers : Cycle cardiaque</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -169,6 +169,11 @@
   .event-chip.active {
     background: var(--accent); color: white; border-color: var(--accent);
   }
+
+  footer.app-footer {
+    text-align: center; font-size: 11px; color: var(--text-secondary);
+    padding: 6px 0; flex-shrink: 0;
+  }
 </style>
 </head>
 <body>
@@ -279,26 +284,28 @@
         <text x="245" y="307" class="annotation-vol" font-size="10" font-weight="bold" fill="#7b1fa2" text-anchor="middle">EDV</text>
         <text x="430" y="418" class="annotation-vol" font-size="10" font-weight="bold" fill="#7b1fa2" text-anchor="middle">ESV</text>
 
-        <!-- 5. ECG (two cycles) — B1 at QRS, NOT at P -->
-        <!-- P wave is at ~180, QRS at ~273, T wave at ~440 -->
+        <!-- 5. ECG (two cycles) -->
         <path d="M 120,500 L 155,500 C 165,470 185,470 195,500 L 245,500 L 255,510 L 268,500 L 273,440 L 278,510 L 283,500 L 288,495 L 293,500 L 370,500 C 390,470 430,470 450,500 L 735,500 L 770,500 C 780,470 800,470 810,500 L 860,500 L 870,510 L 883,500 L 888,440 L 893,510 L 898,500 L 903,495 L 908,500 L 985,500 C 1005,470 1045,470 1065,500 L 1350,500" fill="none" stroke="#212121" stroke-width="2" />
         <text x="178" y="462" class="annotation-black" font-size="10" font-weight="bold" fill="#2c3e50" text-anchor="middle">P</text>
         <text x="273" y="432" class="annotation-black" font-size="10" font-weight="bold" fill="#2c3e50" text-anchor="middle">QRS</text>
         <text x="430" y="462" class="annotation-black" font-size="10" font-weight="bold" fill="#2c3e50" text-anchor="middle">T</text>
 
-        <!-- 6. Phonocardiogram — B1 at QRS position (x=273), B2 at end ejection (x=458) -->
-        <!-- Cycle 1: S1 at x=268-283 (at QRS), S2 at x=453-468 (at end ejection) -->
-        <path d="M 268,580 L 271,555 L 274,570 L 277,545 L 280,560 L 283,580" fill="none" stroke="#616161" stroke-width="2" />
-        <text x="275" y="540" class="annotation-black" font-size="11" font-weight="bold" fill="#2c3e50" text-anchor="middle">B1</text>
+        <!-- 6. Phonocardiogram : B1 at Mitral Closure (x=212), B2 at Aortic Closure (x=458) -->
+        <!-- Cycle 1: B1 at x=212, B2 at x=458 -->
+        <path d="M 204,580 L 207,555 L 210,570 L 213,545 L 216,560 L 219,580" fill="none" stroke="#616161" stroke-width="2" />
+        <text x="212" y="540" class="annotation-black" font-size="11" font-weight="bold" fill="#2c3e50" text-anchor="middle">B1</text>
+        
         <path d="M 453,580 L 456,555 L 459,570 L 462,545 L 465,560 L 468,580" fill="none" stroke="#616161" stroke-width="2" />
         <text x="460" y="540" class="annotation-black" font-size="11" font-weight="bold" fill="#2c3e50" text-anchor="middle">B2</text>
-        <!-- Cycle 2: S1 at x=883-898, S2 at x=1068-1083 -->
-        <path d="M 883,580 L 886,555 L 889,570 L 892,545 L 895,560 L 898,580" fill="none" stroke="#616161" stroke-width="2" />
-        <text x="890" y="540" class="annotation-black" font-size="11" font-weight="bold" fill="#2c3e50" text-anchor="middle">B1</text>
+        
+        <!-- Cycle 2: B1 at x=827 (212+615), B2 at x=1073 (458+615) -->
+        <path d="M 819,580 L 822,555 L 825,570 L 828,545 L 831,560 L 834,580" fill="none" stroke="#616161" stroke-width="2" />
+        <text x="827" y="540" class="annotation-black" font-size="11" font-weight="bold" fill="#2c3e50" text-anchor="middle">B1</text>
+        
         <path d="M 1068,580 L 1071,555 L 1074,570 L 1077,545 L 1080,560 L 1083,580" fill="none" stroke="#616161" stroke-width="2" />
         <text x="1075" y="540" class="annotation-black" font-size="11" font-weight="bold" fill="#2c3e50" text-anchor="middle">B2</text>
 
-        <!-- 7. Valve States — two cycles -->
+        <!-- 7. Valve States : two cycles -->
         <!-- Aortic Valve Cycle 1: CLOSED (120-273), OPEN (273-458), CLOSED (458-735) -->
         <rect x="120" y="610" width="153" height="22" fill="#f44336" opacity="0.85" rx="3" />
         <rect x="273" y="610" width="185" height="22" fill="#4caf50" opacity="0.85" rx="3" />
@@ -338,6 +345,10 @@
     <div class="events-list" id="events-list"></div>
   </main>
 
+  <footer class="app-footer">
+    PMSS Simulations – Outils pédagogiques libres et hors ligne.
+  </footer>
+
 <script>
 (function () {
   'use strict';
@@ -355,7 +366,7 @@
   /* ===== AUDIO ===== */
   var B1_B64 = "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";
 
-  var B2_B64 = "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";
+  var B2_B64 = "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";
 
   function makeAudioUrl(b64) {
     var pad = b64.length % 4;
@@ -389,56 +400,32 @@
     } catch (e) {}
   }
 
-  /* ===== COORDINATE SYSTEM =====
-   * SVG viewBox: 0 0 1400 720
-   * Two cycles: x = 120 to 735 (cycle 1), 735 to 1350 (cycle 2)
-   * Total plot width: 1230px for 1.6s at HR=75
-   * One cycle = 615px = 0.8s
-   *
-   * Key X positions (Cycle 1):
-   *   120  = cycle start (0.0s)
-   *   180  = P wave center
-   *   212  = end atrial systole / MV closes
-   *   273  = QRS / B1 / AV opens
-   *   458  = end ejection / B2 / AV closes
-   *   520  = MV opens
-   *   735  = cycle end (0.8s) = cycle 2 start
-   *
-   * Normalized phase within ONE cycle (0=120, 1=735):
-   *   0.00  = start
-   *   0.15  = end atrial systole (x=212)
-   *   0.25  = QRS / B1 / AV opens (x=273) ← B1 IS HERE, NOT AT P
-   *   0.55  = end ejection / B2 (x=458)
-   *   0.65  = MV opens (x=520)
-   *   1.00  = cycle end
-   */
+  /* ===== COORDINATE SYSTEM ===== */
   var X_START = 120;
   var CYCLE_WIDTH = 615;  // 735 - 120
 
-  // Convert (cycleIndex, phaseInCycle) to SVG x
   function toX(cycleIdx, p) {
     return X_START + cycleIdx * CYCLE_WIDTH + p * CYCLE_WIDTH;
   }
 
-  // Phases (normalized within one cycle)
   var PHASES = [
-    { start: 0.00, end: 0.15, name: 'Systole auriculaire', desc: 'Contraction auriculaire — onde P, remplissage ventriculaire final' },
-    { start: 0.15, end: 0.25, name: 'Contraction isovolumétrique', desc: 'Valves fermées — pression VG monte, QRS, B1 (Lub)' },
-    { start: 0.25, end: 0.55, name: 'Éjection ventriculaire', desc: 'Valve aortique ouverte — éjection du sang, volume VG chute' },
-    { start: 0.55, end: 0.65, name: 'Relaxation isovolumétrique', desc: 'Valves fermées — valve aortique se ferme (B2/Dub)' },
-    { start: 0.65, end: 1.00, name: 'Remplissage ventriculaire', desc: 'Valve mitrale ouverte — remplissage passif puis diastase' }
+    { start: 0.00, end: 0.15, name: 'Systole auriculaire', desc: 'Contraction auriculaire : onde P, remplissage ventriculaire final' },
+    { start: 0.15, end: 0.25, name: 'Contraction isovolumétrique', desc: 'Valves fermées : pression VG monte, QRS, B1 (Lub)' },
+    { start: 0.25, end: 0.55, name: 'Éjection ventriculaire', desc: 'Valve aortique ouverte : éjection du sang, volume VG chute' },
+    { start: 0.55, end: 0.65, name: 'Relaxation isovolumétrique', desc: 'Valves fermées : valve aortique se ferme (B2/Dub)' },
+    { start: 0.65, end: 1.00, name: 'Remplissage ventriculaire', desc: 'Valve mitrale ouverte : remplissage passif puis diastase' }
   ];
 
   /* ===== STATE ===== */
   var HR = 75;
   var SPEED = 1.0;
   var playing = false;
-  var totalTime = 0;  // accumulates across cycles (0 to 2*cycleDur)
+  var totalTime = 0;
   var lastFrameTime = 0;
   var prevP = 0;
 
   function getCycleDuration() { return 60 / HR; }
-  function getTotalDuration() { return getCycleDuration() * 2; }  // 2 cycles
+  function getTotalDuration() { return getCycleDuration() * 2; }
 
   /* ===== CURSOR UPDATE ===== */
   var cursorLine = document.getElementById('cursor-line');
@@ -497,12 +484,9 @@
   }
 
   function updateCursor(totalP) {
-    // totalP: 0 to 2 (0=cycle1 start, 1=cycle2 start, 2=end)
     var cycleIdx = Math.floor(totalP);
     var pInCycle = totalP - cycleIdx;
     var x = X_START + cycleIdx * CYCLE_WIDTH + pInCycle * CYCLE_WIDTH;
-
-    // For waveforms that repeat, map x back to cycle 1 equivalent
     var xInCycle1 = X_START + pInCycle * CYCLE_WIDTH;
 
     cursorLine.setAttribute('x1', x);
@@ -533,12 +517,10 @@
     container.innerHTML = '';
     var events = [
       { p: 0.10, label: 'Onde P' },
-      { p: 0.25, label: 'QRS + B1 (Lub)' },
-      { p: 0.25, label: 'Fermeture mitrale' },
-      { p: 0.25, label: 'Ouverture aortique' },
+      { p: 0.15, label: 'Fermeture mitrale + B1 (Lub)' },
+      { p: 0.25, label: 'QRS + Ouverture aortique' },
       { p: 0.50, label: 'Onde T' },
-      { p: 0.55, label: 'B2 (Dub)' },
-      { p: 0.55, label: 'Fermeture aortique' },
+      { p: 0.55, label: 'B2 (Dub) + Fermeture aortique' },
       { p: 0.65, label: 'Ouverture mitrale' }
     ];
     events.forEach(function (ev) {
@@ -574,14 +556,14 @@
       var pInCycle = (totalTime % cycleDur) / cycleDur;
       var totalP = cycleIdx + pInCycle;
 
-      // B1 at pInCycle=0.25 (QRS position, NOT at P wave)
-      if (prevP < 0.25 && pInCycle >= 0.25) playSound(audioB1);
-      // B2 at pInCycle=0.55 (end ejection)
+      // B1 at pInCycle=0.15 (Mitral valve closure / start of isovolumetric contraction)
+      if (prevP < 0.15 && pInCycle >= 0.15) playSound(audioB1);
+      // B2 at pInCycle=0.55 (end ejection / Aortic valve closure)
       if (prevP < 0.55 && pInCycle >= 0.55) playSound(audioB2);
 
       // Handle cycle boundary
       if (pInCycle < prevP) {
-        if (prevP < 0.25 && pInCycle >= 0.25) playSound(audioB1);
+        if (prevP < 0.15 && pInCycle >= 0.15) playSound(audioB1);
         if (prevP < 0.55 && pInCycle >= 0.55) playSound(audioB2);
       }
 
