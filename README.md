@@ -45,14 +45,13 @@ La simulation haute fidélité ne devrait pas nécessiter un budget important ni
 
 | Application | Capture d'écran |
 | :--- | :--- |
-| Simulateur ECG normal | <!-- screenshot: normal-ecg-simulateur.html --><br>_<em>À venir</em>_ |
-| Axe cardiaque | <!-- screenshot: axe-cardiaque.html --><br>_<em>À venir</em>_ |
-| Capno-bases | <!-- screenshot: capno-bases.html --><br>_<em>À venir</em>_ |
-| Auscultateur cardiaque | <!-- screenshot: auscultateur-cardiaque.html --><br>_<em>À venir</em>_ |
-| Étiqueteur-capno | <!-- screenshot: etiqueteur-capno.html --><br>_<em>À venir</em>_ |
-| Angle alpha | <!-- screenshot: angle-alpha.html --><br>_<em>À venir</em>_ |
-| Ré-inhalation | <!-- screenshot: reinhalation.html --><br>_<em>À venir</em>_ |
-| Capnomalie | <!-- screenshot: capnomalie.html --><br>_<em>À venir</em>_ |
+| Simulateur ECG normal | <img src="screenshorts/ecg-normal.png" alt="ECG normal" width="600"> |
+| Axe cardiaque | <img src="screenshorts/axe-cardiaque.png" alt="Axe cardiaque" width="600"> |
+| Cartographie des électrodes | <img src="screenshorts/carto-electro.png" alt="Cartographie des électrodes" width="600"> |
+| Auscultateur cardiaque | <img src="screenshorts/auscu-cardi.png" alt="Auscultateur cardiaque" width="600"> |
+| Étiqueteur-capno | <img src="screenshorts/ettiqu-capno.png" alt="Étiqueteur-capno" width="600"> |
+| Angle alpha | <img src="screenshorts/angle-alpha.png" alt="Angle alpha" width="600"> |
+| Cycle cardiaque (Wiggers) | <img src="screenshorts/cycle cardiaque.png" alt="Cycle cardiaque" width="600"> |
 
 ### Différence entre les deux versions de l'axe cardiaque
 
