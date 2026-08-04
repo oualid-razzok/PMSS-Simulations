@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Étiqueteur-capno — Phases du capnogramme</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: #f5f5f5; color: #1a1a1a; -webkit-font-smoothing: antialiased;
+  }
+  @supports (height: 100dvh) { html, body { height: 100dvh; } }
+  body { padding: 16px; display: flex; justify-content: center; align-items: stretch; overflow: hidden; }
+  @media (max-width: 820px) { body { padding: 8px; } }
+  .app {
+    width: 100%; max-width: 1200px; height: 100%;
+    display: flex; flex-direction: column;
+    background: #ffffff; border: 1px solid #e5e5e5; border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.03); overflow: hidden;
+  }
+  .app-header {
+    padding: 12px 16px; border-bottom: 1px solid #e5e5e5;
+    display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap;
+  }
+  .app-title { display: flex; align-items: baseline; gap: 8px; }
+  .app-title h1 { font-size: 16px; font-weight: 600; letter-spacing: -0.01em; color: #1a1a1a; }
+  .app-title .subtitle { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #737373; }
+  .header-readout { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .header-readout .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #737373; }
+  .header-readout .value {
+    font-family: ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
+    font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; color: #1a1a1a;
+  }
+  .header-readout .classification {
+    font-size: 12px; font-weight: 600; color: #1a1a1a;
+    padding: 3px 10px; background: #f5f5f5; border-radius: 999px; border: 1px solid #e5e5e5;
+  }
+  .header-readout .classification.good { color: #16a34a; border-color: #16a34a; background: #f0fdf4; }
+  .header-readout .classification.warn { color: #f97316; border-color: #f97316; background: #fff7ed; }
+  .main-grid {
+    flex: 1 1 0; min-height: 0; display: grid;
+    grid-template-columns: minmax(260px, 1fr) minmax(420px, 1.6fr);
+  }
+  @media (max-width: 820px) {
+    .main-grid { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
+  }
+  .control-panel {
+    padding: 16px 18px; border-right: 1px solid #e5e5e5;
+    display: flex; flex-direction: column; gap: 14px; overflow-y: auto; min-height: 0;
+  }
+  @media (max-width: 820px) {
+    .control-panel { border-right: none; border-bottom: 1px solid #e5e5e5; padding: 10px 12px; gap: 8px; }
+  }
+  .panel-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: #737373; font-weight: 700; }
+  .instructions { font-size: 13px; line-height: 1.5; color: #404040; }
+  .instructions strong { color: #1a1a1a; }
+
+  /* Drop zones (overlaid on canvas) */
+  .dropzone {
+    display: inline-block; padding: 6px 10px; font-size: 11px; font-weight: 600;
+    border: 2px dashed #d4d4d4; border-radius: 6px; background: rgba(255,255,255,0.7);
+    color: #737373; min-height: 28px; min-width: 100px; text-align: center;
+    transition: all 0.15s ease; cursor: default; user-select: none;
+  }
+  .dropzone.hover { border-color: #dc2626; background: #fef2f2; color: #1a1a1a; }
+  .dropzone.correct { border-color: #16a34a; border-style: solid; background: #f0fdf4; color: #16a34a; }
+  .dropzone.incorrect { border-color: #dc2626; border-style: solid; background: #fef2f2; color: #dc2626; }
+
+  /* Draggable labels — stacked vertically, larger */
+  .labels-tray { display: flex; flex-direction: column; gap: 10px; padding: 14px; background: #fafafa; border: 1px solid #e5e5e5; border-radius: 8px; }
+  .label-chip {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 16px; font-size: 15px; font-weight: 600;
+    background: #ffffff; color: #1a1a1a; border: 2px solid #d4d4d4; border-radius: 8px;
+    cursor: grab; user-select: none; transition: all 0.15s ease;
+    width: 100%; justify-content: flex-start;
+  }
+  .label-chip:hover { border-color: #dc2626; background: #fef2f2; transform: scale(1.02); }
+  .label-chip:active { cursor: grabbing; }
+  .label-chip.used { opacity: 0.25; cursor: default; pointer-events: none; }
+  .label-chip .swatch { width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0; }
+
+  .action-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+  .action-btn {
+    padding: 8px 14px; font-family: inherit; font-size: 12px; font-weight: 600;
+    border: 1px solid #e5e5e5; background: #ffffff; color: #404040;
+    border-radius: 6px; cursor: pointer; transition: background-color 0.15s ease, color 0.15s ease;
+  }
+  .action-btn:hover { background: #f5f5f5; color: #1a1a1a; }
+  .action-btn.primary { background: #1a1a1a; color: #ffffff; border-color: #1a1a1a; }
+  .action-btn.primary:hover { background: #404040; }
+
+  /* Canvas panel */
+  .canvas-panel { display: flex; flex-direction: column; background: #fafafa; min-height: 0; overflow: hidden; }
+  .canvas-wrap { flex: 1 1 0; min-height: 0; position: relative; background: #ffffff; overflow: hidden; }
+  .canvas-wrap canvas { display: block; width: 100%; height: 100%; }
+  .readout-strip {
+    padding: 10px 14px; background: #ffffff; border-top: 1px solid #e5e5e5;
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+  }
+  @media (max-width: 600px) { .readout-strip { grid-template-columns: repeat(2, 1fr); } }
+  .readout-cell {
+    display: flex; flex-direction: column; gap: 2px; padding: 6px 10px;
+    background: #fafafa; border-radius: 6px; border: 1px solid #f0f0f0;
+  }
+  .readout-cell .lbl { font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; color: #737373; font-weight: 600; }
+  .readout-cell .val { font-family: ui-monospace, "SF Mono", monospace; font-size: 15px; font-weight: 700; color: #1a1a1a; font-variant-numeric: tabular-nums; }
+  .readout-cell .val.good { color: #16a34a; }
+  .readout-cell .val.warn { color: #f97316; }
+  .readout-cell .val.crit { color: #dc2626; }
+
+  .hint-text { font-size: 12px; color: #737373; line-height: 1.5; }
+  .hint-text strong { color: #1a1a1a; }
+</style>
+</head>
+<body>
+  <main class="app">
+    <header class="app-header">
+      <div class="app-title">
+        <h1>Étiqueteur-capno</h1>
+        <span class="subtitle">Phases du capnogramme normal</span>
+      </div>
+      <div class="header-readout">
+        <span class="label">Score</span>
+        <span class="value" id="hdr-score">0 / 4</span>
+        <span class="classification warn" id="hdr-class">À étiqueter</span>
+      </div>
+    </header>
+
+    <div class="main-grid">
+      <section class="control-panel" aria-label="Étiquettes à placer">
+        <div class="panel-title">Étiquettes à placer</div>
+        <div class="labels-tray" id="labels-tray">
+          <div class="label-chip" draggable="true" data-label="phase0">
+            <span class="swatch" style="background:#737373;"></span>Phase 0
+          </div>
+          <div class="label-chip" draggable="true" data-label="phase1">
+            <span class="swatch" style="background:#f97316;"></span>Phase I
+          </div>
+          <div class="label-chip" draggable="true" data-label="phase2">
+            <span class="swatch" style="background:#16a34a;"></span>Phase II
+          </div>
+          <div class="label-chip" draggable="true" data-label="phase3">
+            <span class="swatch" style="background:#0ea5e9;"></span>Phase III
+          </div>
+        </div>
+
+        <div class="action-row">
+          <button class="action-btn primary" id="check-btn">Vérifier</button>
+          <button class="action-btn" id="reset-btn">Nouveau tracé</button>
+        </div>
+      </section>
+
+      <section class="canvas-panel" aria-label="Capnogramme à étiqueter">
+        <div class="canvas-wrap" id="canvas-wrap">
+          <canvas id="capno-canvas"></canvas>
+        </div>
+        <div class="readout-strip">
+          <div class="readout-cell">
+            <span class="lbl">EtCO₂</span>
+            <span class="val good" id="rd-etco2">38 mmHg</span>
+          </div>
+          <div class="readout-cell">
+            <span class="lbl">Fréq. resp.</span>
+            <span class="val" id="rd-rr">12 /min</span>
+          </div>
+          <div class="readout-cell">
+            <span class="lbl">Phases placées</span>
+            <span class="val" id="rd-placed">0 / 4</span>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ===== Phase templates (one breath cycle, t in [0,1]) =====
+   * Phase 0 (inspiration):    t ∈ [0.00, 0.20] → CO₂ = 0
+   * Phase I (espace mort):    t ∈ [0.20, 0.35] → ascension depuis 0
+   * Phase II (plateau):       t ∈ [0.35, 0.85] → plateau alvéolaire (~EtCO₂)
+   * Phase III (descente):     t ∈ [0.85, 1.00] → retour à 0 (expiration suivante)
+   * Note: la nomenclature classique (phase I/II/III) suit la convention standard.
+   */
+  function capnoValue(t, etco2) {
+    if (t < 0.20) return 0;
+    if (t < 0.35) {
+      var u = (t - 0.20) / 0.15;
+      return u * u * (3 - 2 * u) * etco2;            // smoothstep
+    }
+    if (t < 0.85) {
+      var u2 = (t - 0.35) / 0.50;
+      return etco2 * (1.0 + 0.04 * u2);              // pente légère +4%
+    }
+    var u3 = (t - 0.85) / 0.15;
+    return etco2 * 1.04 * (1 - u3 * u3);
+  }
+
+  /* Phase at time t (for coloring) */
+  function phaseAt(t) {
+    if (t < 0.20) return 'phase0';
+    if (t < 0.35) return 'phase1';
+    if (t < 0.85) return 'phase2';
+    return 'phase3';
+  }
+
+  var PHASE_COLORS = {
+    phase0: '#737373',
+    phase1: '#f97316',
+    phase2: '#16a34a',
+    phase3: '#0ea5e9'
+  };
+
+  /* ===== State ===== */
+  var state = {
+    etco2: 38,
+    rr: 12,
+    placed: {},           // { phase1: 'phase1', ... } mapping dropzone->label
+    checked: false
+  };
+
+  function newTrace() {
+    state.etco2 = 32 + Math.round(Math.random() * 12);   // 32–44 mmHg
+    state.rr = 10 + Math.round(Math.random() * 6);        // 10–16 /min
+    state.placed = {};
+    state.checked = false;
+    document.querySelectorAll('.label-chip').forEach(function (c) { c.classList.remove('used'); });
+    renderReadout();
+    draw();
+  }
+
+  function renderReadout() {
+    document.getElementById('rd-etco2').textContent = state.etco2 + ' mmHg';
+    document.getElementById('rd-rr').textContent = state.rr + ' /min';
+    var n = Object.keys(state.placed).length;
+    document.getElementById('rd-placed').textContent = n + ' / 4';
+    document.getElementById('hdr-score').textContent = n + ' / 4';
+    var cls = document.getElementById('hdr-class');
+    if (n === 0) { cls.textContent = 'À étiqueter'; cls.className = 'classification warn'; }
+    else if (n < 4) { cls.textContent = 'En cours'; cls.className = 'classification warn'; }
+    else { cls.textContent = 'Prêt à vérifier'; cls.className = 'classification good'; }
+  }
+
+  /* ===== Canvas ===== */
+  var canvas = document.getElementById('capno-canvas');
+  var ctx = canvas.getContext('2d');
+  var wrap = document.getElementById('canvas-wrap');
+  var dims = { width: 0, height: 0, dpr: 1 };
+
+  function resize() {
+    var dpr = window.devicePixelRatio || 1;
+    var rect = wrap.getBoundingClientRect();
+    dims.width = rect.width;
+    dims.height = rect.height;
+    dims.dpr = dpr;
+    canvas.width = Math.round(rect.width * dpr);
+    canvas.height = Math.round(rect.height * dpr);
+    canvas.style.width = rect.width + 'px';
+    canvas.style.height = rect.height + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    draw();
+  }
+
+  /* Geometry: one cycle spans full width. Phases positioned at fractions of cycle. */
+  var PHASE_ZONES = {
+    phase0: { start: 0.00, end: 0.20 },
+    phase1: { start: 0.20, end: 0.35 },
+    phase2: { start: 0.35, end: 0.85 },
+    phase3: { start: 0.85, end: 1.00 }
+  };
+
+  function cycleGeometry() {
+    var padL = 50, padR = 20, padT = 30, padB = 36;
+    var w = dims.width, h = dims.height;
+    var plotW = w - padL - padR;
+    var plotH = h - padT - padB;
+    var yMax = Math.max(50, Math.ceil(state.etco2 * 1.15 / 10) * 10);
+    return { padL: padL, padR: padR, padT: padT, padB: padB, plotW: plotW, plotH: plotH, yMax: yMax, baselineY: padT + plotH };
+  }
+
+  function drawGrid() {
+    var g = cycleGeometry();
+    var w = dims.width;
+    // Horizontal grid
+    ctx.strokeStyle = '#f0f0f0';
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    for (var v = 0; v <= g.yMax; v += 10) {
+      var y = Math.round(g.baselineY - v * (g.plotH / g.yMax)) + 0.5;
+      ctx.moveTo(g.padL, y); ctx.lineTo(w - g.padR, y);
+    }
+    ctx.stroke();
+    // Baseline
+    ctx.strokeStyle = '#d4d4d4';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(g.padL, Math.round(g.baselineY) + 0.5);
+    ctx.lineTo(w - g.padR, Math.round(g.baselineY) + 0.5);
+    ctx.stroke();
+    // Y axis labels
+    ctx.fillStyle = '#737373';
+    ctx.font = '10px ui-monospace, monospace';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    for (var v2 = 0; v2 <= g.yMax; v2 += 20) {
+      var y2 = g.baselineY - v2 * (g.plotH / g.yMax);
+      ctx.fillText(v2, g.padL - 6, y2);
+    }
+    // Y axis title
+    ctx.save();
+    ctx.translate(14, g.padT + g.plotH / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#737373';
+    ctx.font = '10px sans-serif';
+    ctx.fillText('CO₂ (mmHg)', 0, 0);
+    ctx.restore();
+    // X axis label
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText('Temps (un cycle respiratoire)', g.padL + g.plotW / 2, g.baselineY + 18);
+  }
+
+  function drawTrace() {
+    var g = cycleGeometry();
+    var nSamples = 600;
+    var etco2 = state.etco2;
+
+    // Fill under curve, colored by phase
+    var segments = ['phase0', 'phase1', 'phase2', 'phase3'];
+    segments.forEach(function (ph) {
+      var zone = PHASE_ZONES[ph];
+      var xStart = g.padL + zone.start * g.plotW;
+      var xEnd = g.padL + zone.end * g.plotW;
+      var nSeg = Math.max(20, Math.floor((zone.end - zone.start) * nSamples));
+      ctx.beginPath();
+      ctx.moveTo(xStart, g.baselineY);
+      for (var i = 0; i <= nSeg; i++) {
+        var t = zone.start + (zone.end - zone.start) * (i / nSeg);
+        var x = g.padL + t * g.plotW;
+        var v = capnoValue(t, etco2);
+        var y = g.baselineY - v * (g.plotH / g.yMax);
+        ctx.lineTo(x, y);
+      }
+      ctx.lineTo(xEnd, g.baselineY);
+      ctx.closePath();
+      ctx.fillStyle = PHASE_COLORS[ph] + '22';   // ~13% alpha
+      ctx.fill();
+    });
+
+    // Trace line
+    ctx.strokeStyle = '#1a1a1a';
+    ctx.lineWidth = 2;
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    for (var j = 0; j <= nSamples; j++) {
+      var t2 = j / nSamples;
+      var x2 = g.padL + t2 * g.plotW;
+      var v2 = capnoValue(t2, etco2);
+      var y2 = g.baselineY - v2 * (g.plotH / g.yMax);
+      if (j === 0) ctx.moveTo(x2, y2);
+      else ctx.lineTo(x2, y2);
+    }
+    ctx.stroke();
+
+    // EtCO₂ marker (peak at end of phase II plateau, t≈0.85)
+    var etco2T = 0.85;
+    var etco2X = g.padL + etco2T * g.plotW;
+    var etco2Y = g.baselineY - capnoValue(etco2T, etco2) * (g.plotH / g.yMax);
+    ctx.fillStyle = '#dc2626';
+    ctx.beginPath();
+    ctx.arc(etco2X, etco2Y, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#dc2626';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.moveTo(etco2X, etco2Y);
+    ctx.lineTo(g.padL - 30, etco2Y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#dc2626';
+    ctx.font = 'bold 11px ui-monospace, monospace';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('EtCO₂ ' + etco2, g.padL - 32, etco2Y);
+  }
+
+  /* Angle markers (pre-labeled, static) */
+  function drawAngles() {
+    var g = cycleGeometry();
+    // Alpha angle: at junction of phase I→II (t=0.35)
+    var alphaT = 0.35;
+    var alphaX = g.padL + alphaT * g.plotW;
+    var alphaY = g.baselineY - capnoValue(alphaT, state.etco2) * (g.plotH / g.yMax);
+    // Beta angle: at junction of phase II→0 (t=0.85)
+    var betaT = 0.85;
+    var betaX = g.padL + betaT * g.plotW;
+    var betaY = g.baselineY - capnoValue(betaT, state.etco2) * (g.plotH / g.yMax);
+
+    function drawAngleMarker(x, y, label) {
+      // Small arc indicator
+      ctx.strokeStyle = '#7c3aed';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(x, y, 8, 0, Math.PI * 2);
+      ctx.stroke();
+      // Label
+      var labelEl = document.createElement('div');
+      // We draw label as text on canvas instead
+      ctx.fillStyle = '#7c3aed';
+      ctx.font = 'bold 14px ui-monospace, monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(label, x, y - 18);
+    }
+    drawAngleMarker(alphaX, alphaY, 'α');
+    drawAngleMarker(betaX, betaY, 'β');
+  }
+
+  /* Dropzones: render as HTML overlays */
+  var dropzones = {};
+  function createDropzones() {
+    // Remove any existing
+    Object.keys(dropzones).forEach(function (k) {
+      if (dropzones[k] && dropzones[k].parentNode) dropzones[k].parentNode.removeChild(dropzones[k]);
+    });
+    dropzones = {};
+    var g = cycleGeometry();
+    Object.keys(PHASE_ZONES).forEach(function (ph) {
+      var zone = PHASE_ZONES[ph];
+      var midT = (zone.start + zone.end) / 2;
+      var x = g.padL + midT * g.plotW;
+      var v = capnoValue(midT, state.etco2);
+      var y = g.baselineY - v * (g.plotH / g.yMax);
+      var dz = document.createElement('div');
+      dz.className = 'dropzone';
+      dz.dataset.zone = ph;
+      dz.style.position = 'absolute';
+      dz.style.transform = 'translate(-50%, -50%)';
+      // Position above the curve, but cap to plot area
+      var targetY = Math.max(g.padT + 14, y - 30);
+      dz.style.left = x + 'px';
+      dz.style.top = targetY + 'px';
+      dz.textContent = '?';
+      wrap.appendChild(dz);
+      dropzones[ph] = dz;
+
+      // Drag events
+      dz.addEventListener('dragover', function (e) { e.preventDefault(); dz.classList.add('hover'); });
+      dz.addEventListener('dragleave', function () { dz.classList.remove('hover'); });
+      dz.addEventListener('drop', function (e) {
+        e.preventDefault();
+        dz.classList.remove('hover');
+        var label = e.dataTransfer.getData('text/plain');
+        if (!label) return;
+        // If a label is already placed in this zone, free it
+        if (state.placed[ph]) {
+          var prevChip = document.querySelector('.label-chip[data-label="' + state.placed[ph] + '"]');
+          if (prevChip) prevChip.classList.remove('used');
+        }
+        state.placed[ph] = label;
+        // Mark chip as used
+        var chip = document.querySelector('.label-chip[data-label="' + label + '"]');
+        if (chip) chip.classList.add('used');
+        state.checked = false;
+        renderZone(ph);
+        renderReadout();
+      });
+    });
+  }
+
+  function renderZone(ph) {
+    var dz = dropzones[ph];
+    if (!dz) return;
+    dz.classList.remove('correct', 'incorrect');
+    if (state.placed[ph]) {
+      // Show the placed label text + swatch
+      var chip = document.querySelector('.label-chip[data-label="' + state.placed[ph] + '"]');
+      if (chip) {
+        var swatch = chip.querySelector('.swatch');
+        var swatchBg = swatch ? swatch.style.background : '#737373';
+        dz.innerHTML = '<span style="display:inline-block;width:8px;height:8px;background:' + swatchBg + ';border-radius:2px;margin-right:4px;vertical-align:middle;"></span>' + chip.textContent.trim();
+      }
+      if (state.checked) {
+        if (state.placed[ph] === ph) dz.classList.add('correct');
+        else dz.classList.add('incorrect');
+      }
+    } else {
+      dz.textContent = '?';
+    }
+  }
+
+  function renderAllZones() {
+    Object.keys(PHASE_ZONES).forEach(renderZone);
+  }
+
+  /* Drag source setup */
+  document.querySelectorAll('.label-chip').forEach(function (chip) {
+    chip.addEventListener('dragstart', function (e) {
+      if (chip.classList.contains('used')) { e.preventDefault(); return; }
+      e.dataTransfer.setData('text/plain', chip.dataset.label);
+      e.dataTransfer.effectAllowed = 'move';
+    });
+  });
+
+  /* Check button */
+  document.getElementById('check-btn').addEventListener('click', function () {
+    if (Object.keys(state.placed).length < 4) {
+      alert('Placez les 4 étiquettes avant de vérifier.');
+      return;
+    }
+    state.checked = true;
+    renderAllZones();
+    var correct = 0;
+    Object.keys(PHASE_ZONES).forEach(function (ph) {
+      if (state.placed[ph] === ph) correct++;
+    });
+    var cls = document.getElementById('hdr-class');
+    if (correct === 4) {
+      cls.textContent = 'Parfait !'; cls.className = 'classification good';
+    } else {
+      cls.textContent = correct + '/4 correctes'; cls.className = 'classification warn';
+    }
+    document.getElementById('hdr-score').textContent = correct + ' / 4';
+  });
+
+  /* Reset button */
+  document.getElementById('reset-btn').addEventListener('click', newTrace);
+
+  /* Main draw */
+  function draw() {
+    if (!dims.width) return;
+    ctx.clearRect(0, 0, dims.width, dims.height);
+    drawGrid();
+    drawTrace();
+    drawAngles();
+    createDropzones();
+    renderAllZones();
+  }
+
+  /* Init */
+  function init() {
+    resize();
+    renderReadout();
+  }
+  var ro = new ResizeObserver(function () { resize(); });
+  ro.observe(wrap);
+  window.addEventListener('resize', resize);
+  init();
+})();
+</script>
+</body>
+</html>
