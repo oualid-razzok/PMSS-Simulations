@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ré-inhalation — Phase I et angle bêta</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: #f5f5f5; color: #1a1a1a; -webkit-font-smoothing: antialiased;
+  }
+  @supports (height: 100dvh) { html, body { height: 100dvh; } }
+  body { padding: 16px; display: flex; justify-content: center; align-items: stretch; overflow: hidden; }
+  @media (max-width: 820px) { body { padding: 8px; } }
+  .app {
+    width: 100%; max-width: 1200px; height: 100%;
+    display: flex; flex-direction: column;
+    background: #ffffff; border: 1px solid #e5e5e5; border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.03); overflow: hidden;
+  }
+  .app-header {
+    padding: 12px 16px; border-bottom: 1px solid #e5e5e5;
+    display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap;
+  }
+  .app-title { display: flex; align-items: baseline; gap: 8px; }
+  .app-title h1 { font-size: 16px; font-weight: 600; letter-spacing: -0.01em; color: #1a1a1a; }
+  .app-title .subtitle { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #737373; }
+  .header-readout { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .header-readout .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #737373; }
+  .header-readout .value {
+    font-family: ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
+    font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; color: #1a1a1a;
+  }
+  .header-readout .classification {
+    font-size: 12px; font-weight: 600; color: #1a1a1a;
+    padding: 3px 10px; background: #f5f5f5; border-radius: 999px; border: 1px solid #e5e5e5;
+  }
+  .header-readout .classification.normal { color: #16a34a; border-color: #16a34a; background: #f0fdf4; }
+  .header-readout .classification.warn   { color: #f97316; border-color: #f97316; background: #fff7ed; }
+  .header-readout .classification.crit   { color: #dc2626; border-color: #dc2626; background: #fef2f2; }
+
+  .main-grid {
+    flex: 1 1 0; min-height: 0; display: grid;
+    grid-template-columns: minmax(280px, 1fr) minmax(420px, 1.6fr);
+  }
+  @media (max-width: 820px) {
+    .main-grid { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
+  }
+  .control-panel {
+    padding: 20px 18px; border-right: 1px solid #e5e5e5;
+    display: flex; flex-direction: column; gap: 18px; overflow-y: auto; min-height: 0;
+  }
+  @media (max-width: 820px) {
+    .control-panel { border-right: none; border-bottom: 1px solid #e5e5e5; padding: 10px 12px; gap: 10px; }
+  }
+  .panel-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: #737373; font-weight: 700; }
+  .driver { display: flex; flex-direction: column; gap: 6px; }
+  .driver-header { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .driver-name { font-size: 13px; font-weight: 600; color: #1a1a1a; display: flex; align-items: baseline; gap: 6px; }
+  .driver-name .symbol { font-family: ui-monospace, "SF Mono", monospace; font-size: 12px; color: #dc2626; font-weight: 700; }
+  .driver-name .desc { font-size: 10px; color: #737373; font-weight: 500; text-transform: none; letter-spacing: 0; }
+  .driver-value {
+    font-family: ui-monospace, "SF Mono", monospace; font-size: 15px; font-weight: 700;
+    color: #1a1a1a; font-variant-numeric: tabular-nums; text-align: right;
+  }
+  .driver-value .unit { font-size: 11px; color: #737373; font-weight: 500; margin-left: 2px; }
+  .driver input[type="range"] {
+    width: 100%; height: 6px; -webkit-appearance: none; appearance: none;
+    background: #e5e5e5; border-radius: 3px; outline: none; margin: 4px 0 2px;
+  }
+  .driver input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none; width: 18px; height: 18px;
+    border-radius: 50%; background: #1a1a1a; cursor: pointer;
+    border: 2px solid #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    transition: transform 0.1s ease;
+  }
+  .driver input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); }
+  .driver input[type="range"]::-moz-range-thumb {
+    width: 18px; height: 18px; border-radius: 50%; background: #1a1a1a;
+    cursor: pointer; border: 2px solid #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  }
+  .driver-bar { height: 4px; background: linear-gradient(90deg, #16a34a 0%, #16a34a 40%, #f97316 70%, #dc2626 100%); border-radius: 2px; position: relative; overflow: hidden; }
+  .driver-bar .fill {
+    position: absolute; top: 0; right: 0; bottom: 0; width: 100%;
+    background: #e5e5e5; transition: width 0.1s ease; border-radius: 0 2px 2px 0;
+  }
+  .driver-bar .normal-marker {
+    position: absolute; top: -2px; bottom: -2px; width: 2px; background: #1a1a1a; opacity: 0.5; z-index: 2;
+  }
+
+  .interpretation-box {
+    padding: 12px 14px; background: #fafafa; border: 1px solid #e5e5e5; border-radius: 8px;
+    font-size: 12px; line-height: 1.55; color: #404040;
+  }
+  .interpretation-box .interp-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #737373; font-weight: 700; margin-bottom: 6px; }
+  .interpretation-box strong { color: #1a1a1a; }
+
+  .reset-btn {
+    margin-top: 4px; padding: 8px 14px; font-family: inherit; font-size: 12px; font-weight: 600;
+    border: 1px solid #e5e5e5; background: #ffffff; color: #404040;
+    border-radius: 6px; cursor: pointer; transition: background-color 0.15s ease, color 0.15s ease;
+  }
+  .reset-btn:hover { background: #f5f5f5; color: #1a1a1a; }
+
+  .canvas-panel { display: flex; flex-direction: column; background: #fafafa; min-height: 0; overflow: hidden; }
+  .canvas-wrap { flex: 1 1 0; min-height: 0; position: relative; background: #ffffff; overflow: hidden; }
+  .canvas-wrap canvas { display: block; width: 100%; height: 100%; }
+  .canvas-legend {
+    position: absolute; top: 8px; left: 8px; display: flex; gap: 8px; flex-wrap: wrap; pointer-events: none;
+  }
+  .legend-chip {
+    padding: 3px 8px; font-size: 10px; font-weight: 600; border-radius: 4px;
+    background: rgba(255,255,255,0.85); border: 1px solid rgba(0,0,0,0.08);
+    display: flex; align-items: center; gap: 4px;
+  }
+  .legend-chip .swatch { width: 10px; height: 10px; border-radius: 2px; }
+  .readout-strip {
+    padding: 10px 14px; background: #ffffff; border-top: 1px solid #e5e5e5;
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+  }
+  @media (max-width: 600px) { .readout-strip { grid-template-columns: repeat(2, 1fr); } }
+  .readout-cell {
+    display: flex; flex-direction: column; gap: 2px; padding: 4px 8px;
+    background: #fafafa; border-radius: 6px; border: 1px solid #f0f0f0;
+  }
+  .readout-cell .lbl { font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; color: #737373; font-weight: 600; }
+  .readout-cell .val { font-family: ui-monospace, "SF Mono", monospace; font-size: 15px; font-weight: 700; color: #1a1a1a; font-variant-numeric: tabular-nums; }
+  .readout-cell .val.normal { color: #16a34a; }
+  .readout-cell .val.warn   { color: #f97316; }
+  .readout-cell .val.crit   { color: #dc2626; }
+</style>
+</head>
+<body>
+  <main class="app">
+    <header class="app-header">
+      <div class="app-title">
+        <h1>Ré-inhalation</h1>
+        <span class="subtitle">Phase I et angle bêta</span>
+      </div>
+      <div class="header-readout">
+        <span class="label">CO₂ inspiré</span>
+        <span class="value" id="hdr-fiCO2">0 mmHg</span>
+        <span class="classification normal" id="hdr-class">Normal</span>
+      </div>
+    </header>
+
+    <div class="main-grid">
+      <section class="control-panel" aria-label="Pilotes">
+        <div class="panel-title">Pilotes</div>
+
+        <div class="driver">
+          <div class="driver-header">
+            <span class="driver-name">
+              <span class="symbol">DFG</span>
+              Débit de gaz frais
+              <span class="desc">L/min</span>
+            </span>
+            <span class="driver-value"><span id="dgf-num">5,0</span><span class="unit">L/min</span></span>
+          </div>
+          <!-- Set min="5" (0.5 L/min) to reflect clinical floor (minimal flow) -->
+          <input type="range" id="dgf" min="5" max="80" value="50" step="5">
+          <div class="driver-bar">
+            <div class="fill" id="dgf-fill"></div>
+            <div class="normal-marker" style="left:50%;"></div>
+            <div class="normal-marker" style="left:75%;"></div>
+          </div>
+        </div>
+
+        <div class="driver">
+          <div class="driver-header">
+            <span class="driver-name">
+              <span class="symbol">Absorbeur</span>
+              État de la chaux sodée
+              <span class="desc">%</span>
+            </span>
+            <span class="driver-value"><span id="abs-num">100</span><span class="unit">%</span></span>
+          </div>
+          <input type="range" id="abs" min="0" max="100" value="100" step="5">
+          <div class="driver-bar">
+            <div class="fill" id="abs-fill"></div>
+            <div class="normal-marker" style="left:50%;"></div>
+          </div>
+        </div>
+
+        <div class="interpretation-box">
+          <div class="interp-title">Interprétation clinique</div>
+          <div id="interp-text">La baseline inspiratoire (Phase I) est à zéro — aucun CO₂ n'est ré-inhalé. L'angle β est normal.</div>
+        </div>
+
+        <button class="reset-btn" id="reset">Réinitialiser</button>
+      </section>
+
+      <section class="canvas-panel" aria-label="Capnogramme temps réel">
+        <div class="canvas-wrap">
+          <canvas id="capno-canvas"></canvas>
+          <div class="canvas-legend">
+            <div class="legend-chip"><span class="swatch" style="background:#1a1a1a;"></span>Capnogramme</div>
+            <div class="legend-chip"><span class="swatch" style="background:#dc2626;"></span>CO₂ ré-inhalé (Phase I)</div>
+            <div class="legend-chip"><span class="swatch" style="background:#7c3aed;"></span>Angle β</div>
+          </div>
+        </div>
+        <div class="readout-strip">
+          <div class="readout-cell">
+            <span class="lbl">FiCO₂ (inspiré)</span>
+            <span class="val normal" id="rd-fico2">0 mmHg</span>
+          </div>
+          <div class="readout-cell">
+            <span class="lbl">Angle β</span>
+            <span class="val normal" id="rd-beta">95°</span>
+          </div>
+          <div class="readout-cell">
+            <span class="lbl">ÉtCO₂</span>
+            <span class="val" id="rd-etco2">38 mmHg</span>
+          </div>
+          <div class="readout-cell">
+            <span class="lbl">Ré-inhalation</span>
+            <span class="val normal" id="rd-reinh">0 %</span>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+<script>
+(function () {
+  'use strict';
+
+  var state = {
+    dgf: 5.0,
+    abs: 100,
+    etco2_base: 38
+  };
+
+  function absorberEfficiency() {
+    var x = state.abs / 100;
+    return 1 - Math.pow(1 - x, 2.2);
+  }
+
+  function fiCO2() {
+    var efficiency = absorberEfficiency();
+    var unabsorbedFraction = 1 - efficiency;
+    
+    // Circle system washout modeling: High FGF accelerates CO2 clearance when absorber fails.
+    var dgfWashout = Math.min(1.0, state.dgf / 10.0);
+    var leakFraction = unabsorbedFraction * (1.0 - 0.85 * dgfWashout);
+    leakFraction = Math.min(0.5, leakFraction);
+    return state.etco2_base * leakFraction;
+  }
+
+  function observedEtco2() {
+    var fico2 = fiCO2();
+    return state.etco2_base + fico2 * 0.3;
+  }
+
+  function angleBeta() {
+    var fico2 = fiCO2();
+    var ratio = fico2 / state.etco2_base;
+    return 95 + ratio * 70;
+  }
+
+  function reinhalationPct() {
+    return (fiCO2() / state.etco2_base) * 100;
+  }
+
+  function capnoValue(t, etco2, fico2) {
+    if (t < 0.20) return fico2;
+    if (t < 0.35) {
+      var u = (t - 0.20) / 0.15;
+      var from = fico2;
+      var to = etco2;
+      return from + (to - from) * (u * u * (3 - 2 * u));
+    }
+    if (t < 0.85) {
+      var u2 = (t - 0.35) / 0.50;
+      return etco2 * (1 + 0.04 * u2);
+    }
+    var u3 = (t - 0.85) / 0.15;
+    return etco2 * 1.04 * (1 - u3 * u3) + fico2 * u3 * u3;
+  }
+
+  function capnoNormal(t, etco2) {
+    if (t < 0.20) return 0;
+    if (t < 0.35) {
+      var u = (t - 0.20) / 0.15;
+      return etco2 * (u * u * (3 - 2 * u));
+    }
+    if (t < 0.85) {
+      var u2 = (t - 0.35) / 0.50;
+      return etco2 * (1 + 0.04 * u2);
+    }
+    var u3 = (t - 0.85) / 0.15;
+    return etco2 * 1.04 * (1 - u3 * u3);
+  }
+
+  var canvas = document.getElementById('capno-canvas');
+  var ctx = canvas.getContext('2d');
+  var dims = { width: 0, height: 0, dpr: 1 };
+
+  function resize() {
+    var dpr = window.devicePixelRatio || 1;
+    var rect = canvas.getBoundingClientRect();
+    dims.width = rect.width;
+    dims.height = rect.height;
+    dims.dpr = dpr;
+    canvas.width = Math.round(rect.width * dpr);
+    canvas.height = Math.round(rect.height * dpr);
+    canvas.style.width = rect.width + 'px';
+    canvas.style.height = rect.height + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    draw();
+  }
+
+  function drawGrid() {
+    var w = dims.width, h = dims.height;
+    var padL = 50, padR = 20, padT = 30, padB = 36;
+    var plotW = w - padL - padR;
+    var plotH = h - padT - padB;
+    var yMax = 50;
+    var baselineY = padT + plotH;
+    ctx.strokeStyle = '#f0f0f0';
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    for (var v = 0; v <= yMax; v += 10) {
+      var y = Math.round(baselineY - v * (plotH / yMax)) + 0.5;
+      ctx.moveTo(padL, y); ctx.lineTo(w - padR, y);
+    }
+    ctx.stroke();
+    ctx.strokeStyle = '#d4d4d4';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(padL, Math.round(baselineY) + 0.5);
+    ctx.lineTo(w - padR, Math.round(baselineY) + 0.5);
+    ctx.stroke();
+    ctx.fillStyle = '#737373';
+    ctx.font = '10px ui-monospace, monospace';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    for (var v2 = 0; v2 <= yMax; v2 += 10) {
+      ctx.fillText(v2, padL - 6, baselineY - v2 * (plotH / yMax));
+    }
+    ctx.save();
+    ctx.translate(14, padT + plotH / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.textAlign = 'center';
+    ctx.font = '10px sans-serif';
+    ctx.fillText('CO₂ (mmHg)', 0, 0);
+    ctx.restore();
+  }
+
+  function drawTrace() {
+    var w = dims.width, h = dims.height;
+    var padL = 50, padR = 20, padT = 30, padB = 36;
+    var plotW = w - padL - padR;
+    var plotH = h - padT - padB;
+    var yMax = 50;
+    var baselineY = padT + plotH;
+    var nSamples = 600;
+    var etco2 = observedEtco2();
+    var fico2 = fiCO2();
+    var phaseIY = baselineY - fico2 * (plotH / yMax);
+
+    // Reference normal trace (faint)
+    ctx.strokeStyle = '#16a34a';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 3]);
+    ctx.globalAlpha = 0.5;
+    ctx.beginPath();
+    for (var i = 0; i <= nSamples; i++) {
+      var t = i / nSamples;
+      var x = padL + t * plotW;
+      var v = capnoNormal(t, state.etco2_base);
+      var y = baselineY - v * (plotH / yMax);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 1;
+
+    // Highlight Phase I (baseline inspiratoire) in red if fico2 > 0
+    if (fico2 > 0.5) {
+      ctx.fillStyle = 'rgba(220, 38, 38, 0.18)';
+      ctx.fillRect(padL, phaseIY, plotW * 0.20, baselineY - phaseIY);
+    }
+
+    // Main trace
+    ctx.strokeStyle = '#1a1a1a';
+    ctx.lineWidth = 2;
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    for (var j = 0; j <= nSamples; j++) {
+      var t2 = j / nSamples;
+      var x2 = padL + t2 * plotW;
+      var v2 = capnoValue(t2, etco2, fico2);
+      var y2 = baselineY - v2 * (plotH / yMax);
+      if (j === 0) ctx.moveTo(x2, y2); else ctx.lineTo(x2, y2);
+    }
+    ctx.stroke();
+
+    // Angle β Drawing
+    var betaT = 0.85;
+    var x_j = padL + betaT * plotW;
+    var y_j_canv = baselineY - capnoValue(betaT, etco2, fico2) * (plotH / yMax);
+
+    var dt_tangent = 0.05; 
+    
+    // Backward tangent (Plateau)
+    var t_b = betaT - dt_tangent;
+    var x_b = padL + t_b * plotW;
+    var y_b_canv = baselineY - capnoValue(t_b, etco2, fico2) * (plotH / yMax);
+    
+    var backDx = x_b - x_j;
+    var backDy = y_b_canv - y_j_canv;
+    var backLen = Math.sqrt(backDx * backDx + backDy * backDy);
+    var backDirX = backDx / backLen;
+    var backDirY = backDy / backLen;
+
+    // Forward tangent (Descent)
+    var t_f = betaT + dt_tangent;
+    var x_f = padL + t_f * plotW;
+    var y_f_canv = baselineY - capnoValue(t_f, etco2, fico2) * (plotH / yMax);
+
+    var fwdDx = x_f - x_j;
+    var fwdDy = y_f_canv - y_j_canv;
+    var fwdLen = Math.sqrt(fwdDx * fwdDx + fwdDy * fwdDy);
+    var fwdDirX = fwdDx / fwdLen;
+    var fwdDirY = fwdDy / fwdLen;
+
+    var lineLen = 45;
+    ctx.strokeStyle = '#7c3aed';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.moveTo(x_j, y_j_canv);
+    ctx.lineTo(x_j + backDirX * lineLen, y_j_canv + backDirY * lineLen);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x_j, y_j_canv);
+    ctx.lineTo(x_j + fwdDirX * lineLen, y_j_canv + fwdDirY * lineLen);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    var backAngle = Math.atan2(backDirY, backDirX);
+    var fwdAngle = Math.atan2(fwdDirY, fwdDirX);
+    
+    var arcRadius = 18;
+    ctx.strokeStyle = '#7c3aed';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    
+    ctx.arc(x_j, y_j_canv, arcRadius, fwdAngle, backAngle, false);
+    ctx.stroke();
+
+    var labelAngle = (fwdAngle + backAngle) / 2;
+    var labelX = x_j + Math.cos(labelAngle) * (arcRadius + 16);
+    var labelY = y_j_canv + Math.sin(labelAngle) * (arcRadius + 16);
+    ctx.fillStyle = '#7c3aed';
+    ctx.font = 'bold 13px ui-monospace, monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('β = ' + Math.round(angleBeta()) + '°', labelX, labelY);
+
+    // Label FiCO₂ if elevated
+    if (fico2 > 0.5) {
+      ctx.fillStyle = '#dc2626';
+      ctx.font = 'bold 11px ui-monospace, monospace';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'bottom';
+      ctx.fillText('FiCO₂ = ' + fico2.toFixed(1).replace('.', ',') + ' mmHg', padL + 8, phaseIY - 6);
+    }
+  }
+
+  function draw() {
+    if (!dims.width) return;
+    ctx.clearRect(0, 0, dims.width, dims.height);
+    drawGrid();
+    drawTrace();
+  }
+
+  function updateReadouts() {
+    var fico2 = fiCO2();
+    var etco2 = observedEtco2();
+    var beta = angleBeta();
+    var reinh = reinhalationPct();
+
+    document.getElementById('dgf-num').textContent = state.dgf.toFixed(1).replace('.', ',');
+    document.getElementById('abs-num').textContent = state.abs;
+    document.getElementById('hdr-fiCO2').textContent = fico2.toFixed(1).replace('.', ',') + ' mmHg';
+    document.getElementById('rd-fico2').textContent = fico2.toFixed(1).replace('.', ',') + ' mmHg';
+    document.getElementById('rd-beta').textContent = Math.round(beta) + '°';
+    document.getElementById('rd-etco2').textContent = etco2.toFixed(1).replace('.', ',') + ' mmHg';
+    document.getElementById('rd-reinh').textContent = reinh.toFixed(1).replace('.', ',') + ' %';
+
+    var cls = document.getElementById('hdr-class');
+    var rdFico2 = document.getElementById('rd-fico2');
+    var rdBeta = document.getElementById('rd-beta');
+    var rdReinh = document.getElementById('rd-reinh');
+    rdFico2.className = 'val'; rdBeta.className = 'val'; rdReinh.className = 'val';
+    if (fico2 < 1) {
+      cls.textContent = 'Normal'; cls.className = 'classification normal';
+      rdFico2.classList.add('normal'); rdBeta.classList.add('normal'); rdReinh.classList.add('normal');
+    } else if (fico2 < 5) {
+      cls.textContent = 'Ré-inhalation légère'; cls.className = 'classification warn';
+      rdFico2.classList.add('warn'); rdBeta.classList.add('warn'); rdReinh.classList.add('warn');
+    } else {
+      cls.textContent = 'Ré-inhalation sévère'; cls.className = 'classification crit';
+      rdFico2.classList.add('crit'); rdBeta.classList.add('crit'); rdReinh.classList.add('crit');
+    }
+
+    // Recalculate slider bar fill percentage based on min 0.5 L/min
+    var dgfPct = ((state.dgf - 0.5) / (8.0 - 0.5)) * 100;
+    document.getElementById('dgf-fill').style.width = (100 - dgfPct) + '%';
+    document.getElementById('abs-fill').style.width = (100 - state.abs) + '%';
+
+    var interp = document.getElementById('interp-text');
+    if (fico2 < 0.5) {
+      interp.innerHTML = 'La baseline inspiratoire (Phase I) est à <strong>zéro</strong> — aucun CO₂ n\'est ré-inhalé. L\'angle β est normal (≈ 95°).';
+    } else if (fico2 < 5) {
+      if (state.abs < 80) {
+        interp.innerHTML = 'La baseline inspiratoire (Phase I) s\'élève à <strong>' + fico2.toFixed(1).replace('.', ',') + ' mmHg</strong>. L\'absorbeur de CO₂ est <strong>épuisé</strong> (' + state.abs + '%) — remplacez la chaux sodée. L\'angle β s\'ouvre à ' + Math.round(beta) + '°.';
+      } else {
+        interp.innerHTML = 'La baseline inspiratoire (Phase I) s\'élève à <strong>' + fico2.toFixed(1).replace('.', ',') + ' mmHg</strong>. Augmentez le DGF pour accélérer le balayage du CO₂. L\'angle β s\'ouvre à ' + Math.round(beta) + '°.';
+      }
+    } else {
+      interp.innerHTML = 'La baseline inspiratoire (Phase I) est <strong>franchement élevée</strong> (' + fico2.toFixed(1).replace('.', ',') + ' mmHg). Ré-inhalation massive de CO₂. <strong>Vérifiez l\'absorbeur de chaux sodée, augmentez le DGF, et contrôlez l\'étanchéité de la valve inspiratoire.</strong>';
+    }
+  }
+
+  var dgfSlider = document.getElementById('dgf');
+  dgfSlider.addEventListener('input', function () {
+    state.dgf = parseInt(dgfSlider.value, 10) / 10;
+    updateReadouts();
+    draw();
+  });
+
+  var absSlider = document.getElementById('abs');
+  absSlider.addEventListener('input', function () {
+    state.abs = parseInt(absSlider.value, 10);
+    updateReadouts();
+    draw();
+  });
+
+  document.getElementById('reset').addEventListener('click', function () {
+    dgfSlider.value = 50; state.dgf = 5.0;
+    absSlider.value = 100; state.abs = 100;
+    updateReadouts();
+    draw();
+  });
+
+  var ro = new ResizeObserver(function () { resize(); });
+  ro.observe(canvas);
+  window.addEventListener('resize', resize);
+  resize();
+  updateReadouts();
+})();
+</script>
+</body>
+</html>

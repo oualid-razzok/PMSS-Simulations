@@ -557,9 +557,10 @@
         <div class="canvas-wrap">
           <canvas id="capno-canvas"></canvas>
           <div class="canvas-legend">
-            <div class="legend-chip"><span class="swatch" style="background:#f97316;"></span>Phase I</div>
+            <div class="legend-chip"><span class="swatch" style="background:#737373;"></span>Phase 0 (inspiration)</div>
+            <div class="legend-chip"><span class="swatch" style="background:#f97316;"></span>Phase I (ascension)</div>
             <div class="legend-chip"><span class="swatch" style="background:#16a34a;"></span>Phase II (plateau)</div>
-            <div class="legend-chip"><span class="swatch" style="background:#dc2626;"></span>EtCO₂</div>
+            <div class="legend-chip"><span class="swatch" style="background:#dc2626;"></span>Phase III (descente)</div>
           </div>
         </div>
         <div class="readout-strip">
@@ -704,23 +705,26 @@
     var rightEdge = w;
     var cycleStartX = rightEdge - ((animTime % cycleSec) / cycleSec) * cyclePx;
     // Pour chaque cycle visible, dessiner les bandes
+    // cStart = right edge of cycle (t=1.0), cEnd = left edge (t=0.0)
+    // Time goes from RIGHT (t=1.0, end of cycle) to LEFT (t=0.0, start of cycle)
+    // because the trace scrolls right-to-left
     for (var c = 0; c < 10; c++) {
-      var cStart = cycleStartX - c * cyclePx;
-      var cEnd = cStart - cyclePx;
+      var cStart = cycleStartX - c * cyclePx;   // right edge (t=1.0)
+      var cEnd = cStart - cyclePx;               // left edge (t=0.0)
       if (cEnd > w) continue;
       if (cStart < 0) break;
-      // Phase 0 (0-0.15) : gris
-      ctx.fillStyle = 'rgba(115,115,115,0.04)';
-      ctx.fillRect(cStart - 0.15 * cyclePx, 0, 0.15 * cyclePx, h);
-      // Phase I (0.15-0.35) : orange
+      // Phase 0 (t=0.00 to 0.15) : gris — inspiration, CO₂ = 0
+      ctx.fillStyle = 'rgba(115,115,115,0.05)';
+      ctx.fillRect(cEnd, 0, 0.15 * cyclePx, h);
+      // Phase I (t=0.15 to 0.35) : orange — ascension
       ctx.fillStyle = 'rgba(249,115,22,0.08)';
-      ctx.fillRect(cStart - 0.35 * cyclePx, 0, 0.20 * cyclePx, h);
-      // Phase II (0.35-0.85) : vert
+      ctx.fillRect(cEnd + 0.15 * cyclePx, 0, 0.20 * cyclePx, h);
+      // Phase II (t=0.35 to 0.85) : vert — plateau alvéolaire
       ctx.fillStyle = 'rgba(22,163,74,0.07)';
-      ctx.fillRect(cStart - 0.85 * cyclePx, 0, 0.50 * cyclePx, h);
-      // Phase III (0.85-1.0) : rouge
+      ctx.fillRect(cEnd + 0.35 * cyclePx, 0, 0.50 * cyclePx, h);
+      // Phase III (t=0.85 to 1.00) : rouge — descente inspiratoire
       ctx.fillStyle = 'rgba(220,38,38,0.06)';
-      ctx.fillRect(cStart - 1.0 * cyclePx, 0, 0.15 * cyclePx, h);
+      ctx.fillRect(cEnd + 0.85 * cyclePx, 0, 0.15 * cyclePx, h);
     }
     ctx.restore();
 

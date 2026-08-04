@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Capnomalie — Anomalies capnographiques</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: #f5f5f5; color: #1a1a1a; -webkit-font-smoothing: antialiased;
+  }
+  @supports (height: 100dvh) { html, body { height: 100dvh; } }
+  body { padding: 16px; display: flex; justify-content: center; align-items: stretch; overflow: hidden; }
+  @media (max-width: 820px) { body { padding: 8px; } }
+  .app {
+    width: 100%; max-width: 1200px; height: 100%;
+    display: flex; flex-direction: column;
+    background: #ffffff; border: 1px solid #e5e5e5; border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.03); overflow: hidden;
+  }
+  .app-header {
+    padding: 12px 16px; border-bottom: 1px solid #e5e5e5;
+    display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap;
+  }
+  .app-title { display: flex; align-items: baseline; gap: 8px; }
+  .app-title h1 { font-size: 16px; font-weight: 600; letter-spacing: -0.01em; color: #1a1a1a; }
+  .app-title .subtitle { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #737373; }
+  .header-readout { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .header-readout .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #737373; }
+  .header-readout .value {
+    font-family: ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
+    font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; color: #1a1a1a;
+  }
+  .header-readout .classification {
+    font-size: 12px; font-weight: 600; color: #1a1a1a;
+    padding: 3px 10px; background: #f5f5f5; border-radius: 999px; border: 1px solid #e5e5e5;
+  }
+  .header-readout .classification.normal { color: #16a34a; border-color: #16a34a; background: #f0fdf4; }
+  .header-readout .classification.warn   { color: #f97316; border-color: #f97316; background: #fff7ed; }
+  .header-readout .classification.crit   { color: #dc2626; border-color: #dc2626; background: #fef2f2; }
+
+  .main-grid {
+    flex: 1 1 0; min-height: 0; display: grid;
+    grid-template-columns: minmax(280px, 1fr) minmax(420px, 1.6fr);
+  }
+  @media (max-width: 820px) {
+    .main-grid { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
+  }
+  .control-panel {
+    padding: 20px 18px; border-right: 1px solid #e5e5e5;
+    display: flex; flex-direction: column; gap: 14px; overflow-y: auto; min-height: 0;
+  }
+  @media (max-width: 820px) {
+    .control-panel { border-right: none; border-bottom: 1px solid #e5e5e5; padding: 10px 12px; gap: 8px; }
+  }
+  .panel-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: #737373; font-weight: 700; margin-bottom: 4px; }
+
+  .select-wrapper { position: relative; }
+  .anomaly-select {
+    width: 100%; padding: 12px 14px; font-family: inherit; font-size: 14px; font-weight: 600;
+    border: 2px solid #e5e5e5; background: #ffffff; color: #1a1a1a;
+    border-radius: 8px; cursor: pointer; appearance: none; -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%231a1a1a' d='M6 8L0 0h12z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px;
+  }
+  .anomaly-select:hover { border-color: #dc2626; }
+  .anomaly-select:focus { outline: none; border-color: #dc2626; }
+
+  .reset-btn {
+    margin-top: 12px; padding: 10px 14px; font-family: inherit; font-size: 13px; font-weight: 600;
+    border: 1px solid #e5e5e5; background: #ffffff; color: #404040;
+    border-radius: 6px; cursor: pointer; transition: background-color 0.15s ease, color 0.15s ease;
+  }
+  .reset-btn:hover { background: #f5f5f5; color: #1a1a1a; }
+
+  .canvas-panel { display: flex; flex-direction: column; background: #fafafa; min-height: 0; overflow: hidden; }
+  .canvas-wrap { flex: 1 1 0; min-height: 0; position: relative; background: #ffffff; overflow: hidden; }
+  .canvas-wrap canvas { display: block; width: 100%; height: 100%; }
+  .canvas-legend {
+    position: absolute; top: 8px; left: 8px; display: flex; gap: 8px; flex-wrap: wrap; pointer-events: none;
+  }
+  .legend-chip {
+    padding: 3px 8px; font-size: 10px; font-weight: 600; border-radius: 4px;
+    background: rgba(255,255,255,0.85); border: 1px solid rgba(0,0,0,0.08);
+    display: flex; align-items: center; gap: 4px;
+  }
+  .legend-chip .swatch { width: 10px; height: 10px; border-radius: 2px; }
+  .readout-strip {
+    padding: 10px 14px; background: #ffffff; border-top: 1px solid #e5e5e5;
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+  }
+  @media (max-width: 600px) { .readout-strip { grid-template-columns: repeat(2, 1fr); } }
+  .readout-cell {
+    display: flex; flex-direction: column; gap: 2px; padding: 4px 8px;
+    background: #fafafa; border-radius: 6px; border: 1px solid #f0f0f0;
+  }
+  .readout-cell .lbl { font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; color: #737373; font-weight: 600; }
+  .readout-cell .val { font-family: ui-monospace, "SF Mono", monospace; font-size: 15px; font-weight: 700; color: #1a1a1a; font-variant-numeric: tabular-nums; }
+  .readout-cell .val.normal { color: #16a34a; }
+  .readout-cell .val.warn   { color: #f97316; }
+  .readout-cell .val.crit   { color: #dc2626; }
+</style>
+</head>
+<body>
+  <main class="app">
+    <header class="app-header">
+      <div class="app-title">
+        <h1>Capnomalie</h1>
+        <span class="subtitle">Anomalies capnographiques</span>
+      </div>
+      <div class="header-readout">
+        <span class="label">Anomalie</span>
+        <span class="classification normal" id="hdr-class">Normal</span>
+      </div>
+    </header>
+
+    <div class="main-grid">
+      <section class="control-panel" aria-label="Sélection d'anomalie">
+        <div class="panel-title">Liste déroulante</div>
+        <div class="select-wrapper">
+          <select class="anomaly-select" id="anomaly-select">
+            <option value="normal">Capnogramme normal</option>
+            <option value="esophageal">Intubation œsophagienne</option>
+            <option value="disconnected">Circuit débranché</option>
+            <option value="obstruction">Obstruction bronchique (α ↑)</option>
+            <option value="rebreathing">Ré-inhalation (Phase 0 ↑)</option>
+            <option value="hypoventilation">Hypoventilation (EtCO₂ ↑)</option>
+            <option value="hyperventilation">Hyperventilation (EtCO₂ ↓)</option>
+            <option value="apnea">Apnée</option>
+            <option value="cpr">RCR en cours</option>
+            <option value="rosc">ROSC (retour circulation)</option>
+            <option value="malignant_hyperthermia">Hyperthermie maligne</option>
+            <option value="PE">Embolie pulmonaire (gradient ↑)</option>
+            <option value="cardiac_arrest">Arrêt cardiaque</option>
+            <option value="leaky_circuit">Fuite de circuit</option>
+            <option value="water_trap">Piège à eau saturé</option>
+          </select>
+        </div>
+
+        <button class="reset-btn" id="reset">Réinitialiser</button>
+      </section>
+
+      <section class="canvas-panel" aria-label="Capnogramme">
+        <div class="canvas-wrap">
+          <canvas id="capno-canvas"></canvas>
+          <div class="canvas-legend">
+            <div class="legend-chip"><span class="swatch" style="background:#1a1a1a;"></span>Capnogramme</div>
+          </div>
+        </div>
+        <div class="readout-strip">
+          <div class="readout-cell">
+            <span class="lbl">ÉtCO₂</span>
+            <span class="val normal" id="rd-etco2">38 mmHg</span>
+          </div>
+          <div class="readout-cell">
+            <span class="lbl">FR</span>
+            <span class="val" id="rd-rr">12 /min</span>
+          </div>
+          <div class="readout-cell">
+            <span class="lbl">Statut</span>
+            <span class="val normal" id="rd-status">Normal</span>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ==========================================================================
+   * CAPNOMALIE — Bibliothèque d'anomalies capnographiques (Médicalement révisée)
+   * ========================================================================== */
+
+  var ANOMALIES = {
+    normal: {
+      name: 'Capnogramme normal',
+      etco2: 38, rr: 12, status: 'Normal', statusClass: 'normal',
+      description: 'Phases 0, I, II, III normales. EtCO₂ = 38 mmHg, FR = 12/min.',
+      draw: function(ctx, g) { drawNormal(ctx, g, 38, 12); }
+    },
+    esophageal: {
+      name: 'Intubation œsophagienne',
+      etco2: 0, rr: 12, status: 'Œsophage ✗', statusClass: 'crit',
+      description: '≤ 6 ondes de hauteur décroissante (CO₂ gastrique résiduel) puis tracé plat.',
+      draw: function(ctx, g) { drawEsophageal(ctx, g); }
+    },
+    disconnected: {
+      name: 'Circuit débranché',
+      etco2: 0, rr: 12, status: 'Circuit débranché', statusClass: 'warn',
+      description: 'Chute brutale du tracé à zéro — déconnexion totale du circuit.',
+      draw: function(ctx, g) { drawFlat(ctx, g); }
+    },
+    obstruction: {
+      name: 'Obstruction bronchique',
+      etco2: 36, rr: 16, status: 'α augmenté', statusClass: 'warn',
+      description: 'Angle α ouvert, plateau en forme de requin. BPCO / asthme.',
+      draw: function(ctx, g) { drawObstruction(ctx, g, 36, 16); }
+    },
+    rebreathing: {
+      name: 'Ré-inhalation de CO₂',
+      etco2: 42, rr: 12, status: 'Phase 0 ↑', statusClass: 'warn',
+      description: 'Baseline inspiratoire élevée et PROGRESSIVE, angle β ouvert. Absorbeur épuisé ou DGF insuffisant.',
+      draw: function(ctx, g) { drawRebreathing(ctx, g, 42); }
+    },
+    hypoventilation: {
+      name: 'Hypoventilation',
+      etco2: 55, rr: 8, status: 'EtCO₂ ↑', statusClass: 'crit',
+      description: 'EtCO₂ élevée, FR basse. Dépression respiratoire, narcotiques, myasthénie.',
+      draw: function(ctx, g) { drawNormal(ctx, g, 55, 8); }
+    },
+    hyperventilation: {
+      name: 'Hyperventilation',
+      etco2: 22, rr: 20, status: 'EtCO₂ ↓', statusClass: 'warn',
+      description: 'EtCO₂ basse, FR haute. Anxiété, sepsis précoce, hypoxie.',
+      draw: function(ctx, g) { drawNormal(ctx, g, 22, 20); }
+    },
+    apnea: {
+      name: 'Apnée',
+      etco2: 0, rr: 0, status: 'Apnée', statusClass: 'crit',
+      description: 'Ligne plate après le dernier cycle. Arrêt respiratoire.',
+      draw: function(ctx, g) { drawApnea(ctx, g); }
+    },
+    cpr: {
+      name: 'RCR en cours',
+      etco2: 18, rr: 10, status: 'RCR', statusClass: 'warn',
+      description: 'EtCO₂ basse (~18 mmHg), reflète le débit cardiaque généré par les compressions.',
+      draw: function(ctx, g) { drawNormal(ctx, g, 18, 10); }
+    },
+    rosc: {
+      name: 'ROSC',
+      etco2: 38, rr: 12, status: 'ROSC', statusClass: 'normal',
+      description: 'Remontée brutale de l\'EtCO₂, souvent avec overshoot transitoire (washout du CO₂ veineux accumulé).',
+      draw: function(ctx, g) { drawROSC(ctx, g); }
+    },
+    malignant_hyperthermia: {
+      name: 'Hyperthermie maligne',
+      etco2: 60, rr: 14, status: 'EtCO₂ ↑↑', statusClass: 'crit',
+      description: 'Augmentation rapide de l\'EtCO₂ malgré ventilation constante. Urgence anesthésique.',
+      draw: function(ctx, g) { drawRisingEtco2(ctx, g); }
+    },
+    PE: {
+      name: 'Embolie pulmonaire',
+      etco2: 25, rr: 18, status: 'EtCO₂ ↓', statusClass: 'crit',
+      description: 'EtCO₂ basse avec gradient PaCO₂–EtCO₂ augmenté (espace mort ↑, perfusion pulmonaire ↓).',
+      draw: function(ctx, g) { drawNormal(ctx, g, 25, 18); }
+    },
+    cardiac_arrest: {
+      name: 'Arrêt cardiaque',
+      etco2: 0, rr: 12, status: 'Arrêt', statusClass: 'crit',
+      description: 'Ventilé : washout alvéolaire en quelques cycles → EtCO₂ ≈ 0 malgré ventilation (pas de perfusion).',
+      draw: function(ctx, g) { drawCardiacArrest(ctx, g); }
+    },
+    leaky_circuit: {
+      name: 'Fuite de circuit',
+      etco2: 30, rr: 12, status: 'Fuite', statusClass: 'warn',
+      description: 'EtCO₂ sous-estimée, amplitude réduite. Vérifiez les connexions.',
+      draw: function(ctx, g) { drawLeaky(ctx, g, 30, 12); }
+    },
+    water_trap: {
+      name: 'Piège à eau saturé',
+      etco2: 35, rr: 12, status: 'Artéfact', statusClass: 'warn',
+      description: 'Tracé irrégulier, amorti. L\'eau dans la ligne capnographique fausse la mesure.',
+      draw: function(ctx, g) { drawWaterTrap(ctx, g, 35, 12); }
+    }
+  };
+
+  var state = { anomaly: 'normal' };
+
+  /* ===== Helpers for closures in loops ===== */
+  function makeNormalFn(amp) {
+    return function(t) { return normalCapnoValue(t, amp); };
+  }
+  function makeRebreathFn(fico2, etco2) {
+    return function(t) {
+      if (t < 0.20) return fico2;
+      if (t < 0.35) { var u = (t - 0.20) / 0.15; return fico2 + (etco2 - fico2) * (u * u * (3 - 2 * u)); }
+      if (t < 0.85) { var u2 = (t - 0.35) / 0.50; return etco2 * (1 + 0.04 * u2); }
+      var u3 = (t - 0.85) / 0.15;
+      return etco2 * 1.04 * (1 - u3 * u3) + fico2 * (u3 * u3);
+    };
+  }
+
+  /* ===== Capnogramme templates ===== */
+  function normalCapnoValue(t, etco2) {
+    if (t < 0.20) return 0;
+    if (t < 0.35) {
+      var u = (t - 0.20) / 0.15;
+      return etco2 * (u * u * (3 - 2 * u));
+    }
+    if (t < 0.85) {
+      var u2 = (t - 0.35) / 0.50;
+      return etco2 * (1 + 0.04 * u2);
+    }
+    var u3 = (t - 0.85) / 0.15;
+    return etco2 * 1.04 * (1 - u3 * u3);
+  }
+
+  function drawNormal(ctx, g, etco2, rr) {
+    var cycles = 2;
+    var cycleW = g.plotW / cycles;
+    for (var c = 0; c < cycles; c++) {
+      var offsetX = g.padL + c * cycleW;
+      drawCycle(ctx, g, offsetX, cycleW, etco2, makeNormalFn(etco2));
+    }
+  }
+
+  function drawFlat(ctx, g) {
+    ctx.strokeStyle = '#dc2626';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(g.padL, g.baselineY);
+    ctx.lineTo(g.padL + g.plotW, g.baselineY);
+    ctx.stroke();
+    ctx.fillStyle = '#dc2626';
+    ctx.font = 'bold 16px ui-monospace, monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('CAPNOGRAMME PLAT BRUTAL', g.padL + g.plotW / 2, g.padT + g.plotH / 2);
+  }
+
+  function drawEsophageal(ctx, g) {
+    var cycles = 6;
+    var cycleW = g.plotW / 7; // Leave space for the flat tail
+    var amps = [14, 8, 4.5, 2.5, 1, 0.4];
+    for (var c = 0; c < cycles; c++) {
+      drawCycle(ctx, g, g.padL + c * cycleW, cycleW, amps[c], makeNormalFn(amps[c]));
+    }
+    // Draw the flat tail
+    ctx.strokeStyle = '#1a1a1a'; ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(g.padL + cycles * cycleW, g.baselineY);
+    ctx.lineTo(g.padL + g.plotW, g.baselineY);
+    ctx.stroke();
+
+    ctx.fillStyle = '#dc2626'; ctx.font = 'bold 12px ui-monospace, monospace'; ctx.textAlign = 'center';
+    ctx.fillText('CO₂ gastrique : ≤ 6 ondes décroissantes → plat', g.padL + g.plotW / 2, g.padT + 20);
+  }
+
+  function drawCardiacArrest(ctx, g) {
+    var cycles = 5;
+    var cycleW = g.plotW / cycles;
+    var amps = [38, 12, 4, 1.5, 0.8];
+    for (var c = 0; c < cycles; c++) {
+      drawCycle(ctx, g, g.padL + c * cycleW, cycleW, amps[c], makeNormalFn(amps[c]));
+    }
+    ctx.fillStyle = '#dc2626'; ctx.font = 'bold 12px ui-monospace, monospace'; ctx.textAlign = 'center';
+    ctx.fillText('Arrêt circulatoire : washout sans perfusion', g.padL + g.plotW / 2, g.padT + 20);
+  }
+
+  function drawObstruction(ctx, g, etco2, rr) {
+    var cycles = 2;
+    var cycleW = g.plotW / cycles;
+    for (var c = 0; c < cycles; c++) {
+      var offsetX = g.padL + c * cycleW;
+      drawCycle(ctx, g, offsetX, cycleW, etco2, function(t) {
+        if (t < 0.20) return 0;
+        if (t < 0.45) {
+          var u = (t - 0.20) / 0.25;
+          return etco2 * (1 - Math.exp(-u * 2));
+        }
+        if (t < 0.85) {
+          var u2 = (t - 0.45) / 0.40;
+          return etco2 * (0.85 + 0.20 * u2);
+        }
+        var u3 = (t - 0.85) / 0.15;
+        return etco2 * 1.05 * (1 - u3 * u3);
+      });
+    }
+    ctx.fillStyle = '#dc2626';
+    ctx.font = 'bold 12px ui-monospace, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('α ↑ (≈ 130°)', g.padL + g.plotW * 0.22, g.padT + 20);
+  }
+
+  function drawRebreathing(ctx, g, etco2) {
+    var cycles = 3;
+    var cycleW = g.plotW / cycles;
+    var fgs = [1, 4, 8]; // baseline climbs progressively
+    for (var c = 0; c < cycles; c++) {
+      drawCycle(ctx, g, g.padL + c * cycleW, cycleW, etco2, makeRebreathFn(fgs[c], etco2));
+    }
+    ctx.fillStyle = '#dc2626';
+    ctx.font = 'bold 11px ui-monospace, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('FiCO₂ progressive (absorbeur saturé) + angle β ouvert', g.padL + g.plotW / 2, g.padT + 20);
+  }
+
+  function drawApnea(ctx, g) {
+    var cycleW = g.plotW / 2;
+    drawCycle(ctx, g, g.padL, cycleW, 38, makeNormalFn(38));
+    ctx.strokeStyle = '#1a1a1a';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(g.padL + cycleW, g.baselineY);
+    ctx.lineTo(g.padL + g.plotW, g.baselineY);
+    ctx.stroke();
+    ctx.fillStyle = '#dc2626';
+    ctx.font = 'bold 14px ui-monospace, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('APNÉE', g.padL + cycleW * 1.5, g.padT + 30);
+  }
+
+  function drawROSC(ctx, g) {
+    var cycles = 3;
+    var cycleW = g.plotW / cycles;
+    var amps = [18, 55, 38]; // CPR -> Washout Spike -> Normal
+    for (var c = 0; c < cycles; c++) {
+      drawCycle(ctx, g, g.padL + c * cycleW, cycleW, amps[c], makeNormalFn(amps[c]));
+    }
+    ctx.fillStyle = '#16a34a';
+    ctx.font = 'bold 13px ui-monospace, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('ROSC : remontée brutale + overshoot (washout)', g.padL + g.plotW / 2, g.padT + 30);
+  }
+
+  function drawRisingEtco2(ctx, g) {
+    var cycles = 3;
+    var cycleW = g.plotW / cycles;
+    var etco2s = [35, 48, 62];
+    for (var c = 0; c < cycles; c++) {
+      drawCycle(ctx, g, g.padL + c * cycleW, cycleW, etco2s[c], makeNormalFn(etco2s[c]));
+    }
+    ctx.fillStyle = '#dc2626';
+    ctx.font = 'bold 14px ui-monospace, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('EtCO₂ ↑↑ progressif', g.padL + g.plotW / 2, g.padT + 30);
+  }
+
+  function drawLeaky(ctx, g, etco2, rr) {
+    var cycles = 2;
+    var cycleW = g.plotW / cycles;
+    for (var c = 0; c < cycles; c++) {
+      var offsetX = g.padL + c * cycleW;
+      drawCycle(ctx, g, offsetX, cycleW, etco2 * 0.7, function(t) {
+        return normalCapnoValue(t, etco2 * 0.7) + Math.sin(t * 20) * 1.5;
+      });
+    }
+  }
+
+  function drawWaterTrap(ctx, g, etco2, rr) {
+    var cycles = 2;
+    var cycleW = g.plotW / cycles;
+    for (var c = 0; c < cycles; c++) {
+      var offsetX = g.padL + c * cycleW;
+      drawCycle(ctx, g, offsetX, cycleW, etco2, function(t) {
+        var base = normalCapnoValue(t, etco2);
+        return base + Math.sin(t * 40) * 2 * Math.exp(-t * 3) + Math.sin(t * 15) * 1.5;
+      });
+    }
+  }
+
+  /* ===== Drawing helper ===== */
+  function drawCycle(ctx, g, offsetX, cycleW, etco2, valueFn, etParam) {
+    var nSamples = 200;
+    ctx.strokeStyle = '#1a1a1a';
+    ctx.lineWidth = 2;
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    for (var i = 0; i <= nSamples; i++) {
+      var t = i / nSamples;
+      var x = offsetX + t * cycleW;
+      var v = etParam !== undefined ? valueFn(t, etParam) : valueFn(t);
+      var y = g.baselineY - v * (g.plotH / g.yMax);
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // EtCO₂ marker dot at peak
+    var peakT = 0.85;
+    var peakV = etParam !== undefined ? valueFn(peakT, etParam) : valueFn(peakT);
+    var peakX = offsetX + peakT * cycleW;
+    var peakY = g.baselineY - peakV * (g.plotH / g.yMax);
+    if (peakV > 1) {
+      ctx.fillStyle = '#dc2626';
+      ctx.beginPath();
+      ctx.arc(peakX, peakY, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  /* ===== Canvas setup ===== */
+  var canvas = document.getElementById('capno-canvas');
+  var ctx = canvas.getContext('2d');
+  var dims = { width: 0, height: 0, dpr: 1 };
+
+  function resize() {
+    var dpr = window.devicePixelRatio || 1;
+    var rect = canvas.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) {
+      requestAnimationFrame(resize);
+      return;
+    }
+    dims.width = rect.width;
+    dims.height = rect.height;
+    dims.dpr = dpr;
+    canvas.width = Math.round(rect.width * dpr);
+    canvas.height = Math.round(rect.height * dpr);
+    canvas.style.width = rect.width + 'px';
+    canvas.style.height = rect.height + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    draw();
+  }
+
+  function getGeometry() {
+    var w = dims.width, h = dims.height;
+    var padL = 50, padR = 20, padT = 30, padB = 36;
+    var plotW = w - padL - padR;
+    var plotH = h - padT - padB;
+    var yMax = 70;
+    var baselineY = padT + plotH;
+    return { w: w, h: h, padL: padL, padR: padR, padT: padT, padB: padB, plotW: plotW, plotH: plotH, yMax: yMax, baselineY: baselineY };
+  }
+
+  function drawGrid() {
+    var g = getGeometry();
+    var w = dims.width;
+    ctx.strokeStyle = '#f0f0f0';
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    for (var v = 0; v <= g.yMax; v += 10) {
+      var y = Math.round(g.baselineY - v * (g.plotH / g.yMax)) + 0.5;
+      ctx.moveTo(g.padL, y); ctx.lineTo(w - g.padR, y);
+    }
+    ctx.stroke();
+    ctx.strokeStyle = '#d4d4d4';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(g.padL, Math.round(g.baselineY) + 0.5);
+    ctx.lineTo(w - g.padR, Math.round(g.baselineY) + 0.5);
+    ctx.stroke();
+    // Y axis labels
+    ctx.fillStyle = '#737373';
+    ctx.font = '10px ui-monospace, monospace';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    for (var v2 = 0; v2 <= g.yMax; v2 += 10) {
+      ctx.fillText(v2, g.padL - 6, g.baselineY - v2 * (g.plotH / g.yMax));
+    }
+    // Y axis title
+    ctx.save();
+    ctx.translate(14, g.padT + g.plotH / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.textAlign = 'center';
+    ctx.font = '10px sans-serif';
+    ctx.fillStyle = '#737373';
+    ctx.fillText('CO₂ (mmHg)', 0, 0);
+    ctx.restore();
+  }
+
+  function draw() {
+    if (!dims.width) return;
+    ctx.clearRect(0, 0, dims.width, dims.height);
+    drawGrid();
+    var g = getGeometry();
+    var anomaly = ANOMALIES[state.anomaly];
+    if (anomaly) anomaly.draw(ctx, g);
+  }
+
+  function updateReadouts() {
+    var a = ANOMALIES[state.anomaly];
+    if (!a) return;
+    document.getElementById('rd-etco2').textContent = a.etco2 > 0 ? a.etco2 + ' mmHg' : '— mmHg';
+    document.getElementById('rd-rr').textContent = a.rr > 0 ? a.rr + ' /min' : '— /min';
+    var statusEl = document.getElementById('rd-status');
+    statusEl.textContent = a.status;
+    statusEl.className = 'val ' + a.statusClass;
+    var cls = document.getElementById('hdr-class');
+    cls.textContent = a.name;
+    cls.className = 'classification ' + a.statusClass;
+  }
+
+  function selectAnomaly(key) {
+    state.anomaly = key;
+    document.getElementById('anomaly-select').value = key;
+    updateReadouts();
+    draw();
+  }
+
+  /* ===== Wire up ===== */
+  document.getElementById('anomaly-select').addEventListener('change', function(e) {
+    selectAnomaly(e.target.value);
+  });
+
+  document.getElementById('reset').addEventListener('click', function() {
+    selectAnomaly('normal');
+  });
+
+  /* ===== Init ===== */
+  var ro = new ResizeObserver(function() { resize(); });
+  ro.observe(canvas);
+  window.addEventListener('resize', resize);
+  resize();
+  updateReadouts();
+})();
+</script>
+</body>
+</html>

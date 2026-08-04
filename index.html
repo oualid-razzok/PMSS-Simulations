@@ -472,8 +472,7 @@
     <h2>La simulation médicale,<br>accessible à tous.</h2>
     <p>
       <em>« La simulation est une technique, pas une technologie. »</em><br>
-      <span id="app-count">10</span> applications web légères, gratuites, fonctionnant hors ligne sur tout appareil —
-      pour démocratiser l'enseignement médical.
+      <span id="app-count">16</span> applications web légères, gratuites, fonctionnant hors ligne sur tout appareil pour démocratiser l'enseignement médical.
     </p>
     <div class="stats" id="stats"></div>
   </section>
@@ -617,7 +616,56 @@
       description: '8 sons respiratoires (vésiculaire, bronchique, crépitants, sibilances, stridor, frottements) avec vues thoracique antérieure et postérieure et cycle respiratoire I/E animé.',
       size: '681 KB',
       highlights: ['8 sons respiratoires', 'Vues antérieure + postérieure', 'Cycle I/E animé', 'Différenciation pleural/péricardique']
-    }
+    },
+    {
+      title: 'Cycle cardiaque (Wiggers)',
+      file: 'cycle-cardiaque.html',
+      category: 'auscultation', catLabel: 'Auscultation',
+      icon: '🆗',
+      description: 'Diagramme de Wiggers interactif : pressions aortique, ventriculaire et auriculaire, volume, ECG et sons B1/B2 synchronisés sur un curseur temporel.',
+      size: '36 KB',
+      highlights: ['Diagramme de Wiggers', 'B1/B2 synchronisés', 'FC réglable', 'Vitesse 0.25× à 2×']
+    },
+    {
+      title: 'Étiqueteur-capno',
+      file: 'etiqueteur-capno.html',
+      category: 'capno', catLabel: 'Capnographie',
+      icon: '🆗',
+      badge: 'Nouveau',
+      description: 'Glissez-déposez les étiquettes des phases I, II, III et 0 sur un capnogramme normal. Angles α et β pré-étiquetés.',
+      size: '21 KB',
+      highlights: ['Drag & drop', 'Phases I/II/III/0', 'Angles pré-étiquetés', 'Score final']
+    },
+    {
+      title: 'Capno Angle alpha',
+      file: 'capno-alpha.html',
+      category: 'capno', catLabel: 'Capnographie',
+      icon: '🆗',
+      badge: 'Nouveau',
+      description: 'Pilotez la résistance des voies aériennes (Raw) et observez l\'ouverture de l\'angle α et la déformation du plateau. Modèle basé sur τ = C·Raw.',
+      size: '24 KB',
+      highlights: ['Modèle τ = C·Raw', 'Angle α dynamique', 'Forme en requin', 'Calibré littérature']
+    },
+    {
+      title: 'Ré-inhalation',
+      file: 'reinhalation.html',
+      category: 'capno', catLabel: 'Capnographie',
+      icon: '🆗',
+      badge: 'Nouveau',
+      description: 'Pilotez le débit de gaz frais et l\'absorbeur CO₂. Observez la Phase 0 s\'élever et l\'angle β s\'ouvrir — signes de ré-inhalation.',
+      size: '23 KB',
+      highlights: ['Phase 0 dynamique', 'Angle β', 'Absorbeur CO₂', 'DGF circle']
+    },
+    {
+      title: 'Capnomalie',
+      file: 'capnomalie.html',
+      category: 'capno', catLabel: 'Capnographie',
+      icon: '🆗',
+      badge: 'Nouveau',
+      description: 'Bibliothèque statique de 15 anomalies capnographiques (œsophage, obstruction, ré-inhalation, hyperthermie maligne, embolie pulmonaire, etc.) avec liste déroulante.',
+      size: '26 KB',
+      highlights: ['15 anomalies', 'Liste déroulante', 'Statique', '2 cycles par tracé']
+    },
   ];
 
   /* ===== CATEGORY COLORS ===== */
