@@ -200,11 +200,6 @@
           <option value="2">2×</option>
         </select>
       </div>
-      <div class="hr-control">
-        <label>FC</label>
-        <input type="range" id="hr-slider" min="40" max="160" step="1" value="75">
-        <span class="hr-value"><span id="hr-value">75</span> bpm</span>
-      </div>
     </div>
 
     <div class="phase-label" id="phase-label">
@@ -602,11 +597,13 @@
   });
 
   var hrSlider = document.getElementById('hr-slider');
-  var hrValueEl = document.getElementById('hr-value');
-  hrSlider.addEventListener('input', function (e) {
-    HR = parseInt(e.target.value, 10);
-    hrValueEl.textContent = HR;
-  });
+  if (hrSlider) {
+    var hrValueEl = document.getElementById('hr-value');
+    hrSlider.addEventListener('input', function (e) {
+      HR = parseInt(e.target.value, 10);
+      if (hrValueEl) hrValueEl.textContent = HR;
+    });
+  }
 
   function isTextInput(t) {
     var tag = (t.tagName || '').toLowerCase();
