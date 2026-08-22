@@ -2,7 +2,7 @@
 
 **« La simulation est une technique, pas une technologie. »**
 
-Bienvenue sur le dépôt officiel de PMSS. Nous proposons des applications web de simulation en santé gratuites, légères et entièrement hors ligne, conçues pour démocratiser l'enseignement médical. Ce projet a débuté dans le cadre d'un module de doctorat intitulé « innovation pédagogique », mais nous avons pensé qu'il serait utile de partager ces applications avec le monde entier.
+Bienvenue sur le dépôt officiel de PMSS. Nous proposons des applications web de simulation en santé gratuites, légères et entièrement hors ligne, conçues pour démocratiser l'enseignement en santé. Ce projet a débuté dans le cadre d'un module de doctorat intitulé « innovation pédagogique », mais nous avons pensé qu'il serait utile de partager ces applications avec le monde entier.
 
 Tous nos outils sont conçus pour s’intégrer facilement dans un cours afin d’expliquer un concept et de le visualiser de façon interactive. Il n’y a aucune dépendance externe pour chaque fichier HTML : vous pouvez télécharger l’outil que vous voulez et il sera fonctionnel immédiatement, sans installation ni configuration. Il suffit que vous disposiez d’un navigateur sur votre appareil.
 
